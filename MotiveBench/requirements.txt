@@ -1,0 +1,14 @@
+azure-identity
+azure-cli
+fastapi==0.115.6
+jsonlines==4.0.0
+openai==1.58.1
+pandas==2.2.3
+pydantic==2.10.4
+Requests==2.32.3
+seaborn==0.13.2
+tqdm==4.66.4
+transformers==4.43.3
+uvicorn==0.34.0
+vllm
+flash_attn

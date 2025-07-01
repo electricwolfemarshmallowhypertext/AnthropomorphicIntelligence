@@ -1,0 +1,5 @@
+*.pyc
+wandb
+train/*
+*/__pycache__
+new_model/*
