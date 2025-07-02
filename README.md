@@ -39,7 +39,7 @@ This repository gathers and develops various techniques that contribute toward t
 
 ## Techniques & Sub-Projects
 
-### 1. PCC: Embedding-based Context Compression
+### 1. [PCC: Embedding-based Context Compression](./PCC/README.md)
 
 **PCC** is a technique inspired by human cognitive patterns, aiming to enable large language models (LLMs) to efficiently process long contexts by converting context signals into compact, dense representations. This decoupled compressor-LLM framework leverages embedding-based context compression to significantly reduce inference costs while maintaining essential contextual information and accuracy. Thorough pretraining and adaptive compression rates allow PCC to improve LLM efficiency across various tasks, models, and domains—making it well-suited for real-world applications, especially in resource-constrained environments.
 
@@ -51,7 +51,7 @@ This repository gathers and develops various techniques that contribute toward t
 
 ---
 
-### 2. MotiveBench: Benchmarking Human-like Motivation
+### 2. [MotiveBench: Benchmarking Human-like Motivation](./MotiveBench/README.md)
 
 **MotiveBench** is a comprehensive benchmark designed to evaluate and advance the ability of AI agents to demonstrate human-like motivations and proactive behaviors. By presenting 200 rich contextual scenarios and 600 reasoning tasks across multiple motivational levels—including emotional, social, and practical drivers—MotiveBench rigorously tests whether LLMs can autonomously identify and pursue meaningful actions, not just respond reactively. Analysis across multiple popular model families reveals key challenges, such as reasoning about “love & belonging” motivations, and highlights the current gap between AI and true human-like motivational reasoning.
 
@@ -72,10 +72,14 @@ We welcome contributions! If you are interested in collaborating, please open an
 ---
 
 
+## Privacy
+
+[Microsoft Privacy Statement](https://go.microsoft.com/fwlink/?LinkId=521839).
+
+---
+
 ## Contact
 
 For questions, suggestions, or collaborations, please contact:
 \[jianxun.lian@microsoft.com]
 \[deeprec@microsoft.com]
-
- 
