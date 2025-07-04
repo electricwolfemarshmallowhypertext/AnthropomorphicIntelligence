@@ -1,5 +1,7 @@
-# Copyright (c) 2023 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
+## Copyright (c) Microsoft Corporation.
+## Licensed under the MIT license.
+
+
 
 import re
 import string
