@@ -1,3 +1,6 @@
+## Copyright (c) Microsoft Corporation.
+## Licensed under the MIT license.
+
 questioner_prompt = """
 Consider the four elements: scenario, character identity, motivation, and behavior. In a given scenario, a character with a specific identity performs a behavior based on a particular motivation.
 
