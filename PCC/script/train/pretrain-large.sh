@@ -37,7 +37,7 @@ deepspeed --include node-0:0,1,2,3 --master_port $MASTER_PORT train.py \
     --per_device_train_batch_size 2 \
     --bf16 \
     --per_device_eval_batch_size 2 \
-    --gradient_accumulation_steps 32 \
+    --gradient_accumulation_steps 1 \
     --num_train_epochs 1 \
     --save_steps 750 \
     --eval_steps 250 \

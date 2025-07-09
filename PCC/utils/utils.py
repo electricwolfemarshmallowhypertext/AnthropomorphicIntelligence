@@ -42,7 +42,7 @@ class DataCollator(object):
             padded_next_ids = self.dynamicPadding(next_ids, self.llm_pad_token_id)
         # rag
         else:
-            query_answer_ids = [text["query_answer_ids"] + [self.lm_eos_token_id] for text in examples]
+            query_answer_ids = [text["query_answer_ids"] + [self.llm_eos_token_id] for text in examples]
             label_ids = [text["labels"] + [self.llm_eos_token_id] for text in examples]
             padded_query_answer_ids = self.dynamicPadding(query_answer_ids, self.llm_pad_token_id)
             padded_label_ids = self.dynamicPadding(label_ids, -100)
