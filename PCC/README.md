@@ -24,6 +24,11 @@ We recommend using **conda** to manage your Python environment for better isolat
     ```bash
     pip install -r requirements.txt
     ```
+**Note:** For a quick smooth try, you may use   
+```bash 
+    export DS_SKIP_CUDA_CHECK=1
+```
+to skip the CUDA mismatch guard and allows the training script to run. But this is not suggested; had better to install a correct environment.
 
 # 📷 **Training Overview**
 Our training methods include two stages, which related to the following models:

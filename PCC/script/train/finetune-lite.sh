@@ -33,9 +33,9 @@ deepspeed --include node-0:0,1,2,3 --master_port $MASTER_PORT train.py \
     --output_dir ${OUTPUT_DIR} \
     --logging_dir train/log_dir \
     --overwrite_output_dir True \
-    --per_device_train_batch_size 32 \
+    --per_device_train_batch_size 4 \
     --bf16 \
-    --per_device_eval_batch_size 16 \
+    --per_device_eval_batch_size 4 \
     --gradient_accumulation_steps 1 \
     --num_train_epochs 6 \
     --save_steps 500 \
