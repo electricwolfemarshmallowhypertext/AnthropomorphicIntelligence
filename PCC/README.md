@@ -1,5 +1,4 @@
 # 🔥**PCC**: **P**retraining **C**ontext **C**ompressor for Large Language Models with Embedding-Based Memory
-## Checkpoints and Datasets URL: https://jianxunintern.blob.core.windows.net/yuhongdata/PCC/
 
 ![Image](assert/overview.png)
 
