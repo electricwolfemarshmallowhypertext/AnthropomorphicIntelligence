@@ -19,7 +19,15 @@ nltk.download('punkt_tab')
 
 def _load_data(data_path: str):
     if os.path.exists(data_path):
-        dataset = load_from_disk(data_path)
+        try:
+            pattern = os.path.join(data_path, "test-*.parquet")
+            print(f"Loading parquet files from: {pattern}")
+            dataset = load_dataset("parquet", data_files=pattern)['train']
+        except Exception as e:
+            raise RuntimeError(
+                f"Error: {e} Failed to load dataset from {data_path}."
+                f"Make sure the directory contains 'test-*.parquet' files."
+            ) from e
     else:
         dataset = load_dataset(data_path)['test']
     return dataset
