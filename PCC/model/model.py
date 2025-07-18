@@ -296,11 +296,6 @@ class Decoder(nn.Module):
 
             input_embedding = torch.cat((bos_embedding,cat_embedding),dim=1)
 
-            embedding_attention_mask = torch.ones((input_embedding.size(0),input_embedding.size(1))
-                                              ).to(self.device)
-            
-            # attention_mask = torch.cat((embedding_attention_mask,prompt_text_attention_mask), dim=1).to(self.device)
-            
             embedding = torch.cat((input_embedding,prompt_text_embedding),dim=1).to(self.device)
             
             output = embedding.clone()
@@ -321,7 +316,6 @@ class Decoder(nn.Module):
                     next_token_id = torch.argmax(logits,dim=-1)
                     output = self.model.get_input_embeddings()(next_token_id.unsqueeze(1).to(self.device))
                     generate_text.append(next_token_id.item())
-                    # print(generate_text)
                     if next_token_id.item() in terminators:
                         break
 
@@ -368,11 +362,8 @@ class Decoder(nn.Module):
             # Adjust the shape according to your needs
             cat_embedding = torch.zeros((input_embedding.size(0),input_embedding.size(1)+seg_len*2,input_embedding.size(2))).to(self.device)
             for i in range(seg_len):
-                # bos_index = (i * 5 + 1) if i else 0 
-                # bos_index = i * 6
                 bos_index = (i*(self.embed_len+2))
                 end_index = min((i+1) * (self.embed_len+2) - 1,cat_embedding.size(1)-1)
-                # end_index = min(((i+1) * 5 + 1) if i else 5,cat_embedding.size(1))
                 cat_embedding[:,bos_index,:] = mem_embedding.squeeze(1)
                 cat_embedding[:,end_index,:] = end_mem_embedding.squeeze(1)
                 cat_embedding[:,bos_index+1:end_index,:] = input_embedding[:,i*self.embed_len:min((i+1)*self.embed_len,input_embedding.size(1)),:]
@@ -529,7 +520,6 @@ class PCC(nn.Module):
                 segment_ids = input_ids[:, segment_begin:segment_end]
                 
                 # get per segment's memory
-                # memory = self.memory_compressor(decoded_string)
                 memory = self.compressor(segment_ids)
                 text_embedding: Any | torch.Tensor = memory if text_embedding is None else torch.cat(
                                                     (text_embedding,memory
