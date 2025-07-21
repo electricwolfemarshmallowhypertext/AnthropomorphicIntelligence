@@ -14,10 +14,13 @@ class Config:
     write: bool
     segment_length: int
     stage: int = 1
-    use_lora: bool = False,
-    adapter_model: str = None,
-    compressor_gradient_checkpoint: bool = False,
-    decoder_gradient_checkpoint: bool = False,
+    use_lora: bool = False
+    lora_r: int = 64
+    lora_alpha: int = 32
+    lora_dropout: float = 0.1
+    adapter_model: str = None
+    compressor_gradient_checkpoint: bool = False
+    decoder_gradient_checkpoint: bool = False
 
     def __str__(self):
         return (
@@ -32,6 +35,9 @@ class Config:
             f"Write Enabled: {self.write}\n"
             f"Segment_length: {self.segment_length}\n"
             f"Use lora: {self.use_lora}\n"
+            f"Lora R: {self.lora_r}\n" if self.use_lora else ""
+            f"Lora Alpha: {self.lora_alpha}\n" if self.use_lora else ""
+            f"Lora Dropout: {self.lora_dropout}\n" if self.use_lora else ""
             f"Adapter Model: {self.adapter_model}\n"
             f"Compressor Gradient Checkpoint: {self.compressor_gradient_checkpoint}\n"
             f"Decoder Gradient Checkpoint: {self.decoder_gradient_checkpoint}\n"

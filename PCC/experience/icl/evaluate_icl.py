@@ -10,14 +10,14 @@ import sys
 import warnings
 from typing import List
 
-# import auto_compressor
-import icl_dataset_loading
 import torch
 import transformers
+
 from model.model import PCC
 from torch.cuda.amp import autocast
 from tqdm import tqdm
 
+from .icl_dataset_loading import get_dataset
 from ..dataclass import Config
 
 
@@ -30,9 +30,12 @@ def read_args():
     parser.add_argument("--use_calibration", required=False, action="store_true")
     parser.add_argument("--seed", required=False, type=int, default=42)
     parser.add_argument('--use_lora', type=bool, required=False)
+    parser.add_argument('--lora_r', type=int, required=False, default=64)
+    parser.add_argument('--lora_alpha', type=int, required=False, default=32)
+    parser.add_argument('--lora_dropout', type=float, required=False, default=0.1)
     parser.add_argument('--adapter_model', type=str, required=False)
-    parser.add_argument('--compress_model_path', type=str,required=True)
-    parser.add_argument('--converter_model_path', type=str,required=True)
+    parser.add_argument('--compress_model', type=str,required=True)
+    parser.add_argument('--converter_model', type=str,required=True)
     parser.add_argument('--decoder_model', type=str,required=True)
     parser.add_argument('--compress_ratio',type=int,required=True)
     parser.add_argument('--write',type=bool,default=True)
@@ -236,7 +239,7 @@ class PromptGenerator(torch.utils.data.Dataset):
             
             with torch.no_grad():
                 input_embeds = model.get_input_embeddings()(plaintext_tokens)
-                _softprompt =  all_model.llm._get_segment_mem(softprompt)
+                _softprompt =  all_model.decoder._get_segment_mem(softprompt)
                 input_embeds = torch.cat((_softprompt,input_embeds),dim=1).to(device)
                 with autocast(dtype=torch.bfloat16):
                     calibration_option_logits = model.forward(inputs_embeds=input_embeds, use_cache=False)["logits"][:,-option_length-1:-1,:] \
@@ -291,21 +294,24 @@ class PromptGenerator(torch.utils.data.Dataset):
 
 def main(args):
     # model, tokenizer, device, is_ac = get_model_tokenizer_device_isac(args)
-    dataset = icl_dataset_loading.get_dataset(args)
+    dataset = get_dataset(args)
     use_softprompt = (sum(args.num_softprompt_demonstrations) > 0)
     use_plaintext_demonstrations = (args.num_plaintext_demonstrations > 0)
     
     config = Config(
         device="cuda:0",
         dataset=args.dataset,
-        compress_model=args.compress_model_path,
+        compress_model=args.compress_model,
         adapter_model=args.adapter_model,
-        converter_model=args.converter_model_path,
+        converter_model=args.converter_model,
         decoder_model=args.decoder_model,
         embed_len=(256 // args.compress_ratio),
         write=args.write,
         segment_length=args.segment_length,
         use_lora=args.use_lora,
+        lora_r=args.lora_r,
+        lora_alpha=args.lora_alpha,
+        lora_dropout=args.lora_dropout,
         compressor_gradient_checkpoint=args.compressor_gradient_checkpoint,
         decoder_gradient_checkpoint=args.decoder_gradient_checkpoint
     )
@@ -313,7 +319,10 @@ def main(args):
     is_ac = True
     device = 'cuda:0'
     all_model = PCC(config).to(device).eval()
-    
+    all_model.compressor.eval()
+    all_model.converter.eval()
+    all_model.decoder.eval()
+
     tokenizer = all_model.decoder.tokenizer
     model = all_model.decoder.model
     # initialize prompt generator
@@ -379,7 +388,7 @@ def main(args):
 
             with torch.no_grad():
                 input_embeds = model.get_input_embeddings()(plaintext_tokens)
-                _softprompt =  all_model.llm._get_segment_mem(softprompt)
+                _softprompt =  all_model.decoder._get_segment_mem(softprompt)
                 input_embeds = torch.cat((_softprompt,input_embeds),dim=1).to(device)
                 with autocast(dtype=torch.bfloat16):
                     conditioned_answer_logits = model.forward(inputs_embeds=input_embeds, use_cache=False)["logits"][:,-option_length-1:-1,:] \

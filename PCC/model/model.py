@@ -69,25 +69,15 @@ class Compressor(nn.Module):
                 lora_dropout=lora_dropout,
                 target_modules=["embed_tokens","q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj","lm_head"],
             )
-            self.model = get_peft_model(self.model,perf_config)
-            self.model.print_trainable_parameters()
-            lora_state_dict = None
+
             if lora_adapter_path is None:
+                self.model = get_peft_model(self.model, perf_config)
+                self.model.print_trainable_parameters()
                 print("lora adapter weigts initialize randomly!!!")
             else:
-                if os.path.exists(lora_adapter_path):    
-                    lora_state_dict = torch.load(lora_adapter_path)
-                else:
-                    hf_lora_adapter_path = hf_hub_download(
-                        repo_id=lora_adapter_path,
-                        filename='lora_adapter.bin'
-                    )
-                    print(f"lora_adapter.bin saved to {hf_lora_adapter_path}")
-                    lora_state_dict = torch.load(hf_lora_adapter_path)
-                
-                self.model.load_state_dict(lora_state_dict,strict=False)
-                print(f"Load lora adapter successfully from {lora_adapter_path}")
-            
+                adapter_name = "pcc_adapter"
+                self.model.load_adapter(lora_adapter_path, adapter_name=adapter_name)
+
             for name, param in self.model.named_parameters():
                 if "lora" in name:
                     param.requires_grad = True
@@ -259,7 +249,25 @@ class Decoder(nn.Module):
         
         for param in self.model.parameters():
             param.requires_grad = is_train
-            
+
+    def _get_segment_mem(self, input_embedding):
+        bos_embedding = self.bos_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
+        mem_embedding = self.mem_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
+        end_mem_embedding = self.end_mem_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
+
+        seg_len = math.ceil(input_embedding.size(1)/self.embed_len)
+        # Adjust the shape according to your needs
+        cat_embedding = torch.zeros((input_embedding.size(0),input_embedding.size(1)+seg_len*2,input_embedding.size(2))).to(self.device)
+        for i in range(seg_len):
+            bos_index = (i*(self.embed_len+2))
+            end_index = min((i+1) * (self.embed_len+2) - 1,cat_embedding.size(1)-1)
+
+            cat_embedding[:,bos_index,:] = mem_embedding.squeeze(1)
+            cat_embedding[:,end_index,:] = end_mem_embedding.squeeze(1)
+            cat_embedding[:,bos_index+1:end_index,:] = input_embedding[:,i*self.embed_len:min((i+1)*self.embed_len,input_embedding.size(1)),:]
+         
+        return torch.cat((bos_embedding,cat_embedding),dim=1)
+  
     def generate(self,input_embedding,prompt_text,max_new_token=10):
         self.model.eval()
         with torch.no_grad(): 
@@ -288,11 +296,6 @@ class Decoder(nn.Module):
 
             input_embedding = torch.cat((bos_embedding,cat_embedding),dim=1)
 
-            embedding_attention_mask = torch.ones((input_embedding.size(0),input_embedding.size(1))
-                                              ).to(self.device)
-            
-            # attention_mask = torch.cat((embedding_attention_mask,prompt_text_attention_mask), dim=1).to(self.device)
-            
             embedding = torch.cat((input_embedding,prompt_text_embedding),dim=1).to(self.device)
             
             output = embedding.clone()
@@ -313,7 +316,6 @@ class Decoder(nn.Module):
                     next_token_id = torch.argmax(logits,dim=-1)
                     output = self.model.get_input_embeddings()(next_token_id.unsqueeze(1).to(self.device))
                     generate_text.append(next_token_id.item())
-                    # print(generate_text)
                     if next_token_id.item() in terminators:
                         break
 
@@ -356,9 +358,19 @@ class Decoder(nn.Module):
             bos_embedding = self.bos_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
             mem_embedding = self.mem_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
             end_mem_embedding = self.end_mem_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
-            
-            input_embedding = torch.cat((bos_embedding,mem_embedding,input_embedding,end_mem_embedding),dim=1)
+            seg_len = math.ceil(input_embedding.size(1)/self.embed_len)
+            # Adjust the shape according to your needs
+            cat_embedding = torch.zeros((input_embedding.size(0),input_embedding.size(1)+seg_len*2,input_embedding.size(2))).to(self.device)
+            for i in range(seg_len):
+                bos_index = (i*(self.embed_len+2))
+                end_index = min((i+1) * (self.embed_len+2) - 1,cat_embedding.size(1)-1)
+                cat_embedding[:,bos_index,:] = mem_embedding.squeeze(1)
+                cat_embedding[:,end_index,:] = end_mem_embedding.squeeze(1)
+                cat_embedding[:,bos_index+1:end_index,:] = input_embedding[:,i*self.embed_len:min((i+1)*self.embed_len,input_embedding.size(1)),:]
 
+            # cat llm's bos token
+            input_embedding = torch.cat((bos_embedding,cat_embedding),dim=1)
+           
         embedding_attention_mask = torch.ones((input_embedding.size(0),input_embedding.size(1))
                                               ).to(self.device)
             
@@ -508,7 +520,6 @@ class PCC(nn.Module):
                 segment_ids = input_ids[:, segment_begin:segment_end]
                 
                 # get per segment's memory
-                # memory = self.memory_compressor(decoded_string)
                 memory = self.compressor(segment_ids)
                 text_embedding: Any | torch.Tensor = memory if text_embedding is None else torch.cat(
                                                     (text_embedding,memory
