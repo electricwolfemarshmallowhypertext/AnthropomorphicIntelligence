@@ -1,10 +1,16 @@
 # MotiveBench
 This is the official repository for our paper *"MotiveBench: How Far Are We From Human-Like Motivational Reasoning in Large Language Models?"*
 
+![venue](https://img.shields.io/badge/Venue-ACL--25-278ea5) [![Paper PDF](https://img.shields.io/badge/Paper-PDF-yellow.svg)](https://arxiv.org/abs/2506.13065) [![huggingface🤗](https://img.shields.io/badge/Huggingface-Datasets-red)](https://huggingface.co/datasets/chicosirius/MotiveBench) <img src="https://img.shields.io/badge/Contributions-Welcome-success" alt="status"/>
+
+![](pic/motivebench-cover.png)
+
 ---
 
 ## Overview
 MotiveBench provides a comprehensive evaluation framework for analyzing how well large language models (LLMs) emulate human-like motivational reasoning. The framework includes datasets, evaluation pipelines, and tools to interface with both open-source and closed-source models. By supporting a wide range of LLMs, MotiveBench enables systematic comparisons and insights into their reasoning capabilities.
+
+![](pic/statistics.jpg)
 
 ---
 
@@ -140,6 +146,22 @@ MotiveBench supports a wide range of open-source and closed-source models, inclu
    - `GPT-35-Turbo`
    - `GPT-4o-mini`
    - `GPT-4o`
+
+---
+
+### Citation
+
+```
+@misc{yong2025motivebench,
+      title={MotiveBench: How Far Are We From Human-Like Motivational Reasoning in Large Language Models?}, 
+      author={Xixian Yong and Jianxun Lian and Xiaoyuan Yi and Xiao Zhou and Xing Xie},
+      year={2025},
+      eprint={2506.13065},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2506.13065}, 
+}
+```
 
 ---
 
