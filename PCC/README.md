@@ -142,3 +142,33 @@ For evaluating efficiency:
 ```bash
 bash script/eval/efficiency.sh
 ```
+
+___
+## **Citation**
+If you find our work useful for your research, please kindly cite our paper as follows:
+```
+@inproceedings{dai-etal-2025-pretraining,
+    title = "Pretraining Context Compressor for Large Language Models with Embedding-Based Memory",
+    author = "Dai, Yuhong  and
+      Lian, Jianxun  and
+      Huang, Yitian  and
+      Zhang, Wei  and
+      Zhou, Mingyang  and
+      Wu, Mingqi  and
+      Xie, Xing  and
+      Liao, Hao",
+    editor = "Che, Wanxiang  and
+      Nabende, Joyce  and
+      Shutova, Ekaterina  and
+      Pilehvar, Mohammad Taher",
+    booktitle = "Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+    month = jul,
+    year = "2025",
+    address = "Vienna, Austria",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.acl-long.1394/",
+    doi = "10.18653/v1/2025.acl-long.1394",
+    pages = "28715--28732",
+    ISBN = "979-8-89176-251-0"
+}
+```
