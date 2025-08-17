@@ -3,13 +3,13 @@
 LEARNING_RATE=5e-5
 COMPRESS_RATIO=4
 
-COMPRESS_MODEL=PCC-Large-Encoder-Llama3-8B-Instruct
-ADAPTER_MODEL=Stage1-PCC-Large-4x
-CONVERTER_MODEL=Stage1-PCC-Large-4x
+COMPRESS_MODEL=BroAlanTaps/PCC-Large-Encoder-Llama3-8B-Instruct
+ADAPTER_MODEL=BroAlanTaps/Stage1-PCC-Large-4x
+CONVERTER_MODEL=BroAlanTaps/Stage1-PCC-Large-4x
 LLM_MODEL=meta-llama/Meta-Llama-3-8B-Instruct
 
-TRAIN_DATA_DIR=Stage2-PCC-Large-SFT-Squad
-VALID_DATA_DIR=Stage2-PCC-Large-SFT-Squad
+TRAIN_DATA_DIR=BroAlanTaps/Stage2-PCC-Large-SFT-Squad
+VALID_DATA_DIR=BroAlanTaps/Stage2-PCC-Large-SFT-Squad
 
 PROJECT_NAME=PCC-Large-Stage2-Compress:${COMPRESS_RATIO}x-Lr:${LEARNING_RATE}
 OUTPUT_DIR=train/${PROJECT_NAME}
