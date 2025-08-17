@@ -69,11 +69,12 @@ UPLOAD_HF = True
 
 ### Pre-training Data
 
-- 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct FineWeb Data (256 tokens per segment, 5B tokens)]
+- 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct FineWeb Data (256 tokens per segment, 5B tokens)](https://huggingface.co/datasets/BroAlanTaps/GPT2-Large-Llama3-8B-fineweb-256-5Btokens)
 
 
 ### Pre-training Model
 
+- 🔥🔥🔥[Pre-training Checkpoint](https://huggingface.co/collections/BroAlanTaps/pcc-pretrained-682448eed8826f59f72dd2e3)
 
 **Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The checkpoint ``PCC-Decoder-Llama3-8B-Instruct`` was trained by adding Special Token `<MEM>`, `</MEM>` and `<AE>` and freezing other parameters during warm-up stage. After that, we fixed special token's parameters in the next stage. 
 
@@ -92,10 +93,11 @@ bash script/train/pretrain-large.sh
 
 ### Fine-tuning Data
 
-- 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct Squad SFT Data]
+- 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct Squad SFT Data](https://huggingface.co/datasets/BroAlanTaps/Stage2-PCC-Lite-SFT-Squad)
 
 ### Fine-tuning Checkpoint Zoo
 
+- 🔥🔥🔥[Fine-tuning Checkpoint](https://huggingface.co/collections/BroAlanTaps/pcc-finetuned-689ec7d4b71dd5645d2f3ceb)
 
 **Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The checkpoint ``PCC-Decoder-Llama3-8B-Instruct`` was trained by adding Special Token `<MEM>`, `</MEM>` and `<AE>` and freezing other parameters during warm-up stage. After that, we fixed special token's parameters in the next stage. 
 
@@ -141,4 +143,17 @@ bash script/eval/icl.sh
 For evaluating efficiency:
 ```bash
 bash script/eval/efficiency.sh
+```
+
+---
+
+## 🥳 **Citation**
+```
+@inproceedings{dai2025pretraining,
+  title={Pretraining Context Compressor for Large Language Models with Embedding-Based Memory},
+  author={Dai, Yuhong and Lian, Jianxun and Huang, Yitian and Zhang, Wei and Zhou, Mingyang and Wu, Mingqi and Xie, Xing and Liao, Hao},
+  booktitle={Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  pages={28715--28732},
+  year={2025}
+}
 ```
