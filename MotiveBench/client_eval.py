@@ -11,6 +11,7 @@ import os
 from vllm import LLM, SamplingParams
 import numpy as np
 import time
+from datasets import load_dataset
 
 
 SERVER_URL = "http://localhost:{}/v1/chat/completions"  # Dynamic port in the URL
@@ -25,29 +26,31 @@ def get_parser():
     parser.add_argument('--parse_mode', action='store_true', help="Enable parse mode (default: False)")
     return parser
 
-def load_questions(input_file, order):
-    with open(input_file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-        questions = []
-        answers = []
+def load_questions_from_hf(dataset_name, order):
+    # Load dataset from Hugging Face
+    dataset = load_dataset("chicosirius/MotiveBench", name=dataset_name)
+    data = dataset['train']  # Assuming the data is in the 'train' split
+    
+    questions = []
+    answers = []
 
-        for item in data:
-            if args.cot:
-                question_1 = "The following is a Motivational Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Motivation Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 1"], order)) + "\n\nPlease first think step by step, conduct analysis on the answers to the questions, output the reasoning process, and finally output the most likely option letter. **The last line of your reply should only contain one character of your final choice.**"
-                question_2 = "The following is a Behavioral Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Behavior Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 2"], order)) + "\n\nPlease first think step by step, conduct analysis on the answers to the questions, output the reasoning process, and finally output the most likely option letter. **The last line of your reply should only contain one character of your final choice.**"
-                question_3 = "The following is a Motivational and Behavioral Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Motivation and Behavior Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 3"], order)) + "\n\nPlease first think step by step, conduct analysis on the answers to the questions, output the reasoning process, and finally output the most likely option letter. **The last line of your reply should only contain one character of your final choice.**"
-            else:
-                question_1 = "The following is a Motivational Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Motivation Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 1"], order)) + "\n\nPlease answer this multiple-choice question. The result can only return **one character without any other explanation**."
-                question_2 = "The following is a Behavioral Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Behavior Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 2"], order)) + "\n\nPlease answer this multiple-choice question. The result can only return **one character without any other explanation**."
-                question_3 = "The following is a Motivational and Behavioral Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Motivation and Behavior Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 3"], order)) + "\n\nPlease answer this multiple-choice question. The result can only return **one character without any other explanation**."
-            
-            correct_answer_1 = get_new_correct_answer(item["Correct Answer 1"], order)
-            correct_answer_2 = get_new_correct_answer(item["Correct Answer 2"], order)
-            correct_answer_3 = get_new_correct_answer(item["Correct Answer 3"], order)
-            questions.append([question_1, question_2, question_3])
-            answers.append([correct_answer_1, correct_answer_2, correct_answer_3])
+    for item in data:
+        if args.cot:
+            question_1 = "The following is a Motivational Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Motivation Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 1"], order)) + "\n\nPlease first think step by step, conduct analysis on the answers to the questions, output the reasoning process, and finally output the most likely option letter. **The last line of your reply should only contain one character of your final choice.**"
+            question_2 = "The following is a Behavioral Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Behavior Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 2"], order)) + "\n\nPlease first think step by step, conduct analysis on the answers to the questions, output the reasoning process, and finally output the most likely option letter. **The last line of your reply should only contain one character of your final choice.**"
+            question_3 = "The following is a Motivational and Behavioral Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Motivation and Behavior Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 3"], order)) + "\n\nPlease first think step by step, conduct analysis on the answers to the questions, output the reasoning process, and finally output the most likely option letter. **The last line of your reply should only contain one character of your final choice.**"
+        else:
+            question_1 = "The following is a Motivational Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Motivation Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 1"], order)) + "\n\nPlease answer this multiple-choice question. The result can only return **one character without any other explanation**."
+            question_2 = "The following is a Behavioral Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Behavior Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 2"], order)) + "\n\nPlease answer this multiple-choice question. The result can only return **one character without any other explanation**."
+            question_3 = "The following is a Motivational and Behavioral Reasoning Question. Based on the content of the given question, please infer the most likely answer and output the answer index.\n\n" + item["Motivation and Behavior Reasoning Question"] + "\nOptions: " + str(rearrange_options(item["Options 3"], order)) + "\n\nPlease answer this multiple-choice question. The result can only return **one character without any other explanation**."
+        
+        correct_answer_1 = get_new_correct_answer(item["Correct Answer 1"], order)
+        correct_answer_2 = get_new_correct_answer(item["Correct Answer 2"], order)
+        correct_answer_3 = get_new_correct_answer(item["Correct Answer 3"], order)
+        questions.append([question_1, question_2, question_3])
+        answers.append([correct_answer_1, correct_answer_2, correct_answer_3])
 
-        return questions, answers
+    return questions, answers
 
 def rearrange_options(options, order):
     # List of alphabet letters to update the labels
@@ -119,13 +122,12 @@ def main():
     order_list.extend([[1, 4, 3, 2, 5, 6], [2, 5, 4, 3, 6, 1], [3, 1, 2, 5, 4, 6], [2, 3, 5, 4, 1, 6], [3, 4, 1, 2, 6, 5], [5, 6, 2, 1, 3, 4]]) 
     order_list.extend([[1, 3, 2, 4, 5, 6], [6, 5, 4, 2, 3, 1], [3, 1, 5, 6, 4, 2], [2, 3, 6, 5, 1, 4], [5, 4, 1, 6, 2, 3], [4, 2, 6, 1, 3, 5]])
 
-
     if args.cot:
         eval_type = 'cot'
     else:
         eval_type = 'base'
+
     current_directory = os.getcwd()  # Get current working directory
-    input_file_path = os.path.join(current_directory, args.dataset, f"{args.dataset}_questions.json")
     output_file_path = os.path.join(current_directory, "results", f"{args.dataset}_{args.llm.split('/')[-1]}_{eval_type}.log")
     ourdir = os.path.dirname(output_file_path)
     os.makedirs(ourdir, exist_ok=True)
@@ -165,7 +167,7 @@ def main():
     acc_all_list = []
 
     for idx, order in enumerate(order_list):
-        questions, answers = load_questions(input_file_path, order)
+        questions, answers = load_questions_from_hf(args.dataset, order)
         model_answers = []
 
         if args.parse_mode:
@@ -210,7 +212,6 @@ def main():
             else:
                 for question in tqdm(questions, desc=f"Run {idx}"):
                     question_1, question_2, question_3 = question
-                    # print(get_model_response(question_1))
                     answer_1 = get_model_response(question_1).strip('assistant\n\n').strip()
                     answer_1 = answer_1.strip('.').strip('\'').strip('\"').strip('*').strip('*')[0].upper()
                     answer_2 = get_model_response(question_2).strip('assistant\n\n').strip()
@@ -219,7 +220,6 @@ def main():
                     answer_3 = answer_3.strip('.').strip('\'').strip('\"').strip('*').strip('*')[0].upper()
                     model_answers.append([answer_1, answer_2, answer_3])
                     print(f"Question 1: {question_1}\nAnswer 1: {answer_1}\n\nQuestion 2: {question_2}\nAnswer 2: {answer_2}\n\nQuestion 3: {question_3}\nAnswer 3: {answer_3}\n\n")
-
 
         accuracy_1, accuracy_2, accuracy_3, accuracy_all = get_accuracy(answers, model_answers)
         acc_1 += accuracy_1
@@ -232,7 +232,6 @@ def main():
         acc_3_list.append(accuracy_3)
         acc_all_list.append(accuracy_all)
         
-
         f.write("------------------------------------------------------------\n")
         f.write(f"Order: {order}\n")
         f.write(f"Model answers: {model_answers}\n")
@@ -250,7 +249,6 @@ def main():
     f.write(f"Variance of all questions: {np.var(acc_all_list)}\n")
     f.write("------------------------------------------------------------\n")
      
-
     # average accuracy
     f.write("------------------------------------------------------------\n")
     f.write(f"Average accuracy of question 1: {acc_1 / len(order_list)}\n")

@@ -136,9 +136,9 @@ For evaluating efficiency:
 bash script/eval/efficiency.sh
 ```
 
----
 
 ## 🥳 **Citation**
+If you find our work useful for your research, please kindly cite our paper:
 ```
 @inproceedings{dai2025pretraining,
   title={Pretraining Context Compressor for Large Language Models with Embedding-Based Memory},
