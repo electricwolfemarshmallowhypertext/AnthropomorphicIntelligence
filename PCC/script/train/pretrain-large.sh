@@ -3,13 +3,13 @@ UPLOAD_HF=False
 LEARNING_RATE=1e-4
 COMPRESS_RATIO=4
 
-COMPRESS_MODEL=PCC-Large-Encoder-Llama3-8B-Instruct
+COMPRESS_MODEL=BroAlanTaps/PCC-Large-Encoder-Llama3-8B-Instruct
 ADAPTER_MODEL=None
 CONVERTER_MODEL=None
 DECODER_MODEL=meta-llama/Meta-Llama-3-8B-Instruct
 
-TRAIN_DATA_DIR=GPT2-Large-Llama3-8B-fineweb-256-5Btokens
-VALID_DATA_DIR=GPT2-Large-Llama3-8B-fineweb-256-5Btokens
+TRAIN_DATA_DIR=BroAlanTaps/GPT2-Large-Llama3-8B-fineweb-256-5Btokens
+VALID_DATA_DIR=BroAlanTaps/GPT2-Large-Llama3-8B-fineweb-256-5Btokens
 
 PROJECT_NAME=PCC-Large-Stage1-Compress:${COMPRESS_RATIO}x-Lr:${LEARNING_RATE}
 OUTPUT_DIR=train/${PROJECT_NAME}

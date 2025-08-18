@@ -69,11 +69,7 @@ UPLOAD_HF = True
 
 ### Pre-training Data
 
-- 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct FineWeb Data (256 tokens per segment, 5B tokens)]
-
-
-### Pre-training Model
-
+- 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct FineWeb Data (256 tokens per segment, 5B tokens)](https://huggingface.co/datasets/BroAlanTaps/GPT2-Large-Llama3-8B-fineweb-256-5Btokens)
 
 **Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The checkpoint ``PCC-Decoder-Llama3-8B-Instruct`` was trained by adding Special Token `<MEM>`, `</MEM>` and `<AE>` and freezing other parameters during warm-up stage. After that, we fixed special token's parameters in the next stage. 
 
@@ -92,10 +88,7 @@ bash script/train/pretrain-large.sh
 
 ### Fine-tuning Data
 
-- 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct Squad SFT Data]
-
-### Fine-tuning Checkpoint Zoo
-
+- 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct Squad SFT Data](https://huggingface.co/datasets/BroAlanTaps/Stage2-PCC-Lite-SFT-Squad)
 
 **Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The checkpoint ``PCC-Decoder-Llama3-8B-Instruct`` was trained by adding Special Token `<MEM>`, `</MEM>` and `<AE>` and freezing other parameters during warm-up stage. After that, we fixed special token's parameters in the next stage. 
 
@@ -143,32 +136,15 @@ For evaluating efficiency:
 bash script/eval/efficiency.sh
 ```
 
-___
-## **Citation**
-If you find our work useful for your research, please kindly cite our paper as follows:
+
+## 🥳 **Citation**
+If you find our work useful for your research, please kindly cite our paper:
 ```
-@inproceedings{dai-etal-2025-pretraining,
-    title = "Pretraining Context Compressor for Large Language Models with Embedding-Based Memory",
-    author = "Dai, Yuhong  and
-      Lian, Jianxun  and
-      Huang, Yitian  and
-      Zhang, Wei  and
-      Zhou, Mingyang  and
-      Wu, Mingqi  and
-      Xie, Xing  and
-      Liao, Hao",
-    editor = "Che, Wanxiang  and
-      Nabende, Joyce  and
-      Shutova, Ekaterina  and
-      Pilehvar, Mohammad Taher",
-    booktitle = "Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
-    month = jul,
-    year = "2025",
-    address = "Vienna, Austria",
-    publisher = "Association for Computational Linguistics",
-    url = "https://aclanthology.org/2025.acl-long.1394/",
-    doi = "10.18653/v1/2025.acl-long.1394",
-    pages = "28715--28732",
-    ISBN = "979-8-89176-251-0"
+@inproceedings{dai2025pretraining,
+  title={Pretraining Context Compressor for Large Language Models with Embedding-Based Memory},
+  author={Dai, Yuhong and Lian, Jianxun and Huang, Yitian and Zhang, Wei and Zhou, Mingyang and Wu, Mingqi and Xie, Xing and Liao, Hao},
+  booktitle={Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  pages={28715--28732},
+  year={2025}
 }
 ```
