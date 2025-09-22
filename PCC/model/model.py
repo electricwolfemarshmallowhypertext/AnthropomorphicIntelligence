@@ -12,7 +12,7 @@ from huggingface_hub import hf_hub_download
 from peft import LoraConfig, PeftModel, TaskType, get_peft_model
 from rich.console import Console
 from torch import nn
-from torch.cuda.amp import autocast
+from torch.amp import autocast
 from torch.nn import functional as F
 from torch.nn.functional import gelu
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -111,7 +111,7 @@ class Compressor(nn.Module):
             input_ids_ = torch.cat((input_ids,mem_ids_tensor),dim=1).to(self.device)
             
             attention = torch.full((input_ids_.size(0),input_ids_.size(1)),1).to(self.device)
-        with autocast(dtype=torch.bfloat16):
+        with autocast('cuda', dtype=torch.bfloat16):
             text_embedding = self.model(input_ids=input_ids_,attention_mask=attention, output_hidden_states=True)
         embedding = text_embedding.hidden_states[-1][:,-self.embed_len:,:]
         
@@ -307,7 +307,7 @@ class Decoder(nn.Module):
                 self.tokenizer.convert_tokens_to_ids("<|eot_id|>")
             ]
 
-            with autocast():
+            with autocast('cuda'):
                 for i in range(max_new_token):
                     out = self.model(inputs_embeds=output, past_key_values=past_key_values, use_cache=True)
                     logits = out.logits[:, -1, :len(self.tokenizer)]
@@ -354,7 +354,7 @@ class Decoder(nn.Module):
                 prompt_text_attention_mask = encoder_prompt_text['attention_mask']
                 prompt_text_embedding = self.model.get_input_embeddings()(prompt_text_ids).to(self.device)
                 
-        with autocast(dtype=torch.bfloat16):
+        with autocast('cuda', dtype=torch.bfloat16):
             bos_embedding = self.bos_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
             mem_embedding = self.mem_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
             end_mem_embedding = self.end_mem_embedding.unsqueeze(0).repeat(input_embedding.size(0),1,1)
@@ -411,7 +411,7 @@ class Decoder(nn.Module):
 
         targets_ = torch.cat((empty_target,targets),dim=1).to(self.device) if task_type in ["ae","next_token"] else torch.cat((empty_target,labels_ids_tensor),dim=1).to(self.device)
         
-        with autocast(dtype=torch.bfloat16):
+        with autocast('cuda', dtype=torch.bfloat16):
             output = self.model(
                 inputs_embeds = embedding,
                 attention_mask = attention_mask,
@@ -512,7 +512,7 @@ class PCC(nn.Module):
         # be used to store concatenated embedding
         text_embedding = None
         for i in range(segment_len):
-            with autocast(dtype=torch.bfloat16):
+            with autocast('cuda', dtype=torch.bfloat16):
                 # segment interval
                 segment_begin = i * segment
                 segment_end = ((i+1)*segment) if ((i+1)*segment) < input_len else input_len
@@ -556,7 +556,7 @@ class PCC(nn.Module):
         text_embedding = None
         
         for i in range(segment_len):
-            with autocast(dtype=torch.bfloat16):
+            with autocast('cuda', dtype=torch.bfloat16):
                 segment_begin = i * segment
                 segment_end = ((i+1)*segment) if ((i+1)*segment) < input_len else input_len
                 
