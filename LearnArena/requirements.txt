@@ -1,0 +1,13 @@
+requests
+openai
+rich
+chess
+networkx
+python-dotenv
+opencv-python
+websockets
+vllm
+numpy
+pandas
+torch
+transformers
