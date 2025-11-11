@@ -12,6 +12,7 @@
 * [Techniques & Sub-Projects](#techniques--sub-projects)
   * [1. PCC: Embedding-based Context Compression](#1-pcc-embedding-based-context-compression)
   * [2. MotiveBench: Benchmarking Human-like Motivation](#2-motivebench-benchmarking-human-like-motivation) 
+  * [3. LearnArena: Benchmarking Learning Ability](#3-learnArena-benchmarking-learning-ability) 
 * [Contributing](#contributing) 
 * [Contact](#contact)
 
@@ -64,7 +65,7 @@ This repository gathers and develops various techniques that contribute toward t
 ---
 
 
-### 3. [LearnArena: Benchmarking General Learning](./LearnArena/README.md)
+### 3. [LearnArena: Benchmarking Learning Ability](./LearnArena/README.md)
 
 **LearnArena** is a cognitively grounded benchmark for assessing how LLMs **learn**—not just solve static tasks—across three dimensions: **Learning from Instructor** (interactive feedback), **Learning from Concept** (rule summaries), and **Learning from Experience** (self-selected trajectory reuse). Built on a modified TextArena setup, it standardizes a two-player loop where the evaluated model plays 20 matches per environment, receives teacher feedback, conditions on concise rules, and leverages prior games as in-context examples.
 
