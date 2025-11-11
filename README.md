@@ -63,6 +63,21 @@ This repository gathers and develops various techniques that contribute toward t
 
 ---
 
+
+### 3. [LearnArena: Benchmarking General Learning](./LearnArena/README.md)
+
+**LearnArena** is a cognitively grounded benchmark for assessing how LLMs **learn**—not just solve static tasks—across three dimensions: **Learning from Instructor** (interactive feedback), **Learning from Concept** (rule summaries), and **Learning from Experience** (self-selected trajectory reuse). Built on a modified TextArena setup, it standardizes a two-player loop where the evaluated model plays 20 matches per environment, receives teacher feedback, conditions on concise rules, and leverages prior games as in-context examples.
+
+**Key Features:**
+
+- Three learning dimensions: instructor feedback (LfI), concept summaries (LfC), experience trajectories (LfE)
+- Unified protocol: 8 environments, 20 matches per model, fixed teacher opponent, win-rate metric
+- Cross-model benchmarking and insights on scale limits, instructor quality, and few- vs. many-shot behavior
+
+---
+
+
+
 ## Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
