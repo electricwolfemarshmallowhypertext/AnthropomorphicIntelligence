@@ -12,6 +12,7 @@
 * [Techniques & Sub-Projects](#techniques--sub-projects)
   * [1. PCC: Embedding-based Context Compression](#1-pcc-embedding-based-context-compression)
   * [2. MotiveBench: Benchmarking Human-like Motivation](#2-motivebench-benchmarking-human-like-motivation) 
+  * [3. SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](#3-socialcc-interactive-evaluation-for-cultural-competence-in-language-agents) 
 * [Contributing](#contributing) 
 * [Contact](#contact)
 
