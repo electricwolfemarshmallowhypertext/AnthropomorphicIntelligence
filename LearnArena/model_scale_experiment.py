@@ -1,20 +1,19 @@
 from pathlib import Path
-import sys
-project_root = str(Path(__file__).parent.parent.parent.parent)
-if project_root not in sys.path:
-    sys.path.append(project_root)
-
-import custom_environment.TextArena.textarena as ta
+from envs.registration import make
+import agents
+import wrappers
 import json
 import os
 import argparse
 import logging
 import time
 from typing import Dict, List, Tuple, Optional
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
-from threading import Lock
-from utils.utils import start_vllm_server, stop_vllm_server
+from utils.utils import (
+    create_agent,
+    get_game_summary,
+    start_vllm_server,
+    stop_vllm_server
+)
 
 # Set up logging
 logging.basicConfig(
@@ -24,76 +23,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def get_agent(model_name: str, port: int):
-    """Create an agent with specified model and port"""
-    agent = ta.agents.OpenRouterAgent(
-        model_name=model_name,
-        api_base=f"http://localhost:{port}/v1",
-        api_key="your_api_key_here",
-        timeout=120
-    )
-    return agent
-
-def get_game_summary(game: str, agent, env) -> str:
-    """Generate or load a summary of the game rules with strategic advice"""
-    summary_dir = "environment_summary"
-    summary_file = os.path.join(summary_dir, f"{game}.jsonl")
-    
-    if os.path.exists(summary_file):
-        logger.info(f"Loading existing game summary for {game}")
-        try:
-            with open(summary_file, 'r') as f:
-                summary_data = json.load(f)
-                return summary_data.get("summary", "")
-        except Exception as e:
-            logger.error(f"Error loading game summary: {str(e)}")
-    
-    logger.info(f"Generating new game summary for {game}")
-    
-    env.reset(num_players=2)
-    player_id, observation = env.get_observation()
-    
-    original_system_prompt = agent.system_prompt
-    summary_prompt = "You are an expert game strategist with deep knowledge of game theory and optimal play. Your task is to provide concise, actionable strategic advice that will help a player win. Focus on identifying winning patterns, key decision points, and optimal strategies."
-    agent.system_prompt = summary_prompt
-    
-    prompt = (
-        f"For this game '{game}', provide brief winning strategies based on this initial observation.\n\n"
-        f"WINNING STRATEGIES:\n\n"
-        f"Top 3-5 strategic principles that lead to victory\n\n"
-        f"Best opening moves or early game tactics\n\n"
-        f"Key patterns to recognize during gameplay\n\n"
-        f"Critical mistakes to avoid\n\n"
-        f"Rules of the Game: {observation}\n\n"
-        f"Keep your response concise and focused on practical advice that will maximize winning chances."
-    )
-    
-    try:
-        summary = agent(prompt)
-        os.makedirs(summary_dir, exist_ok=True)
-        with open(summary_file, 'w') as f:
-            json.dump({"game": game, "summary": summary}, f)
-        logger.info(f"Saved game summary for {game}")
-    except Exception as e:
-        logger.error(f"Error generating game summary: {str(e)}")
-        summary = f"Error generating summary: {str(e)}"
-    
-    agent.system_prompt = original_system_prompt
-    env.close()
-    return summary
-
-def run_game(game: str, player0_model: str, player1_model: str, with_concept: bool, num_rounds: int = 20) -> Dict:
+def run_game(game: str, player0_model: str, player1_model: str, with_concept: bool, num_rounds: int = 20,
+             mode: str = "vllm", player0_api_base: str = None, player0_api_key: str = None,
+             player1_api_base: str = None, player1_api_key: str = None) -> Dict:
     """Run a set of games between Player-0 and Player-1 with or without concept guidance"""
     logger.info(f"Starting games for {game} with Player-0: {player0_model}, Player-1: {player1_model} (with_concept={with_concept})")
     
     # Initialize agents
-    player0 = get_agent(player0_model, 8000)  # Player-0 always uses port 8000
-    player1 = get_agent(player1_model, 8001)  # Player-1 always uses port 8001
+    player0 = create_agent(player0_model, 8000, mode, player0_api_base, player0_api_key, is_player0=True)
+    player1 = create_agent(player1_model, 8001, mode, player1_api_base, player1_api_key, is_player0=False)
     
     # Get game summary if using concept guidance
     if with_concept:
-        env = ta.make(env_id=game)
-        env = ta.wrappers.LLMObservationWrapper(env=env)
+        env = make(env_id=game)
+        env = wrappers.LLMObservationWrapper(env=env)
         game_summary = get_game_summary(game, player0, env)
         player1.system_prompt = f"GAME ANALYSIS AND WINNING STRATEGIES:\n{game_summary}\n\nREMEMBER: Apply these strategic principles consistently to maximize your chances of winning.\n\n{player1.system_prompt}"
     
@@ -112,9 +55,9 @@ def run_game(game: str, player0_model: str, player1_model: str, with_concept: bo
     # Play games
     for game_num in range(num_rounds):
         try:
-            env = ta.make(env_id=game)
-            env = ta.wrappers.LLMObservationWrapper(env=env)
-            env = ta.wrappers.SimpleRenderWrapper(
+            env = make(env_id=game)
+            env = wrappers.LLMObservationWrapper(env=env)
+            env = wrappers.SimpleRenderWrapper(
                 env=env,
                 player_names={0: "Player0", 1: "Player1"},
             )
@@ -147,19 +90,25 @@ def run_game(game: str, player0_model: str, player1_model: str, with_concept: bo
     results["win_rate"] = results["wins"] / num_rounds if num_rounds > 0 else 0
     return results
 
-def run_experiment(games: List[str], player0_model: str, player1_model: str, output_file: str, num_rounds: int = 20):
+def run_experiment(games: List[str], player0_model: str, player1_model: str, output_file: str, num_rounds: int = 20,
+                   mode: str = "vllm", player0_api_base: str = None, player0_api_key: str = None,
+                   player1_api_base: str = None, player1_api_key: str = None):
     """Run the full experiment across all games"""
     results = []
     
     for game in games:
         # Run without concept
         logger.info(f"Running {game} without concept")
-        results_without = run_game(game, player0_model, player1_model, with_concept=False, num_rounds=num_rounds)
+        results_without = run_game(game, player0_model, player1_model, with_concept=False, num_rounds=num_rounds,
+                                   mode=mode, player0_api_base=player0_api_base, player0_api_key=player0_api_key,
+                                   player1_api_base=player1_api_base, player1_api_key=player1_api_key)
         results.append(results_without)
         
         # Run with concept
         logger.info(f"Running {game} with concept")
-        results_with = run_game(game, player0_model, player1_model, with_concept=True, num_rounds=num_rounds)
+        results_with = run_game(game, player0_model, player1_model, with_concept=True, num_rounds=num_rounds,
+                               mode=mode, player0_api_base=player0_api_base, player0_api_key=player0_api_key,
+                               player1_api_base=player1_api_base, player1_api_key=player1_api_key)
         results.append(results_with)
         
         # Save results after each game
@@ -174,37 +123,56 @@ def main():
     parser.add_argument("--output-file", type=str, required=True, help="Output JSON file path")
     parser.add_argument("--num-rounds", type=int, default=20, help="Number of rounds per game")
     parser.add_argument("--player0-model", type=str, required=True, help="Model name for Player-0")
-    parser.add_argument("--player0-path", type=str, required=True, help="Path to Player-0 model")
+    parser.add_argument("--player0-path", type=str, required=False, help="Path to Player-0 model (for vLLM mode)")
     parser.add_argument("--player1-model", type=str, required=True, help="Model name for Player-1")
-    parser.add_argument("--player1-path", type=str, required=True, help="Path to Player-1 model")
-    parser.add_argument("--gpu", type=int, default=4, help="Number of GPUs to use")
+    parser.add_argument("--player1-path", type=str, required=False, help="Path to Player-1 model (for vLLM mode)")
+    parser.add_argument("--gpu", type=int, default=4, help="Number of GPUs to use (vLLM mode)")
+    
+    # API mode arguments
+    parser.add_argument("--mode", type=str, default="vllm", choices=["vllm", "api"], 
+                       help="Mode: 'vllm' for local vLLM servers, 'api' for external API endpoints")
+    parser.add_argument("--player0-api-base", type=str, help="API base URL for Player-0 (API mode)")
+    parser.add_argument("--player0-api-key", type=str, help="API key for Player-0 (API mode, or set API_KEY_0 env var)")
+    parser.add_argument("--player1-api-base", type=str, help="API base URL for Player-1 (API mode)")
+    parser.add_argument("--player1-api-key", type=str, help="API key for Player-1 (API mode, or set API_KEY_1 env var)")
     args = parser.parse_args()
+    
+    # Validate arguments based on mode
+    if args.mode == "vllm":
+        if not args.player0_path or not args.player1_path:
+            parser.error("--player0-path and --player1-path are required for vLLM mode")
+    elif args.mode == "api":
+        if not args.player0_api_base or not args.player1_api_base:
+            parser.error("--player0-api-base and --player1-api-base are required for API mode")
     
     # Parse games
     games = [game.strip() for game in args.games.split(",")]
     
-    # Start vLLM servers for both models
     server_processes = []
     
-    # Start Player-0 server
-    logger.info(f"Starting vLLM server for Player-0 ({args.player0_model}) at {args.player0_path}...")
-    proc0 = start_vllm_server(
-        model_path=args.player0_path,
-        model_name=args.player0_model,
-        port=8000,
-        gpu=args.gpu
-    )
-    server_processes.append(proc0)
-    
-    # Start Player-1 server
-    logger.info(f"Starting vLLM server for Player-1 ({args.player1_model}) at {args.player1_path}...")
-    proc1 = start_vllm_server(
-        model_path=args.player1_path,
-        model_name=args.player1_model,
-        port=8001,
-        gpu=args.gpu
-    )
-    server_processes.append(proc1)
+    if args.mode == "vllm":
+        # Start vLLM servers for both models
+        # Start Player-0 server
+        logger.info(f"Starting vLLM server for Player-0 ({args.player0_model}) at {args.player0_path}...")
+        proc0 = start_vllm_server(
+            model_path=args.player0_path,
+            model_name=args.player0_model,
+            port=8000,
+            gpu=args.gpu
+        )
+        server_processes.append(proc0)
+        
+        # Start Player-1 server
+        logger.info(f"Starting vLLM server for Player-1 ({args.player1_model}) at {args.player1_path}...")
+        proc1 = start_vllm_server(
+            model_path=args.player1_path,
+            model_name=args.player1_model,
+            port=8001,
+            gpu=args.gpu
+        )
+        server_processes.append(proc1)
+    else:
+        logger.info(f"Using API mode with Player-0: {args.player0_api_base}, Player-1: {args.player1_api_base}")
     
     try:
         # Run experiment
@@ -213,7 +181,12 @@ def main():
             args.player0_model, 
             args.player1_model, 
             args.output_file, 
-            args.num_rounds
+            args.num_rounds,
+            mode=args.mode,
+            player0_api_base=args.player0_api_base,
+            player0_api_key=args.player0_api_key,
+            player1_api_base=args.player1_api_base,
+            player1_api_key=args.player1_api_key
         )
         
         # Print summary
@@ -230,8 +203,9 @@ def main():
             
     finally:
         # Stop all vLLM servers
-        for proc in server_processes:
-            stop_vllm_server(proc)
+        if args.mode == "vllm":
+            for proc in server_processes:
+                stop_vllm_server(proc)
 
 if __name__ == "__main__":
     main() 

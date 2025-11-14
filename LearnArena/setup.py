@@ -6,12 +6,13 @@ setup(
     description="LearnArena: A Benchmark Suite for Evaluating General Learning Ability of Language Models",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    packages=find_packages(include=["textarena", "textarena.*", "utils", "utils.*"]),
+    packages=find_packages(include=["agents", "agents.*", "envs", "envs.*", "wrappers", "wrappers.*", "learnarena_utils", "learnarena_utils.*"]),
+    py_modules=["core"],
     include_package_data=True,
     package_data={
         "": ["*.json", "*.jsonl"],  # Include all JSON/JSONL files
-        "textarena": ["envs/**/*.json", "utils/data/*"],
-        "textarena.envs": ["**/*.json"],
+        "envs": ["**/*.json", "**/data/*"],
+        "learnarena_utils": ["data/*"],
     },
     install_requires=[
         "requests",

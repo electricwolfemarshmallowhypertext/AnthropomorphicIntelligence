@@ -1,10 +1,8 @@
 from pathlib import Path
 import sys
-project_root = str(Path(__file__).parent.parent.parent)
-if project_root not in sys.path:
-    sys.path.append(project_root)
-
-import textarena as ta
+from envs.registration import make
+import agents
+import wrappers
 import json
 import os
 import argparse
@@ -12,6 +10,13 @@ import logging
 import time
 from typing import Dict, List, Tuple, Optional
 import re
+from utils.utils import (
+    create_agent,
+    score_game_quality,
+    generate_experience_analysis,
+    start_vllm_server,
+    stop_vllm_server
+)
 
 # Set up logging
 logging.basicConfig(
@@ -31,136 +36,41 @@ class ExperienceDrivenExperiment:
     """
     
     def __init__(self, player0_model: str = "qwen2.5-32b-chat", player0_port: int = 8020, 
-                 player1_port: int = 8010):
+                 player1_port: int = 8010, mode: str = "vllm",
+                 player0_api_base: str = None, player0_api_key: str = None,
+                 player1_api_base: str = None, player1_api_key: str = None):
         self.player0_model = player0_model
         self.player0_port = player0_port
         self.player1_port = player1_port
+        self.mode = mode
+        self.player0_api_base = player0_api_base
+        self.player0_api_key = player0_api_key
+        self.player1_api_base = player1_api_base
+        self.player1_api_key = player1_api_key
         
-    def get_agent(self, model_name: str, port: int):
+    def get_agent(self, model_name: str, port: int, is_player0: bool = True):
         """Create an agent with specified model and port"""
-        agent = ta.agents.OpenRouterAgent(
+        api_base = self.player0_api_base if is_player0 else self.player1_api_base
+        api_key = self.player0_api_key if is_player0 else self.player1_api_key
+        
+        return create_agent(
             model_name=model_name,
-            api_base=f"http://localhost:{port}/v1",
-            api_key="your_api_key_here",
+            port=port,
+            mode=self.mode,
+            api_base=api_base,
+            api_key=api_key,
+            is_player0=is_player0,
             timeout=120
         )
-        
-        # Wrap agent call for better error handling
-        original_call = agent.__call__
-        def safe_call(observation: str) -> str:
-            try:
-                response = original_call(observation)
-                if response is None:
-                    logger.error(f"Agent {model_name} returned None response")
-                    return "Error: No response generated"
-                return response
-            except Exception as e:
-                logger.error(f"Error in {model_name} agent call: {type(e).__name__}: {str(e)}")
-                return f"Error: {type(e).__name__}: {str(e)}"
-        
-        agent.__call__ = safe_call
-        return agent
     
     def score_game_quality(self, player0_agent, game_history: Dict, game_outcome: str) -> int:
-        """Score the game quality on a scale of 0-10 using Player-0 as judge with prompts"""
-        if not game_history.get("moves"):
-            return 0
-        
-        last_move = game_history["moves"][-1]
-        
-        # Save original system prompt
-        original_prompt = player0_agent.system_prompt
-        
-        try:
-            # Set system prompt for scoring
-            player0_agent.system_prompt = ("You are an expert game judge. Evaluate game quality objectively "
-                                         "on a scale of 0-10 based on strategic depth, tactical execution, "
-                                         "and overall gameplay quality.")
-            
-            scoring_prompt = (
-                f"Score this game on a scale of 0-10 based on overall gameplay quality.\n"
-                f"Game outcome: {game_outcome}\n"
-                f"Final observation: {last_move['observation']}\n"
-                f"Final action: {last_move['action']}\n\n"
-                f"Rating scale:\n"
-                f"0-2: Poor - Basic mistakes, no clear strategy\n"
-                f"3-4: Fair - Some good moves but inconsistent play\n"
-                f"5-6: Good - Solid strategic play with clear planning\n"
-                f"7-8: Very Good - Strong tactical execution and strategy\n"
-                f"9-10: Excellent - Masterful play with optimal decisions\n\n"
-                f"End your response with 'Score: X/10' where X is your rating."
-            )
-            
-            score_response = player0_agent(scoring_prompt)
-            if score_response is None or "Error:" in score_response:
-                logger.error(f"Error getting game score: {score_response}")
-                return 0
-            
-            # Extract score using regex
-            match = re.search(r'(\d+)/10', score_response)
-            if match:
-                return int(match.group(1))
-            else:
-                logger.warning(f"Could not extract score from response: {score_response}")
-                return 0
-                
-        except Exception as e:
-            logger.error(f"Exception getting game score: {type(e).__name__}: {str(e)}")
-            return 0
-        finally:
-            # Restore original system prompt
-            player0_agent.system_prompt = original_prompt
-
+        """Score the game quality on a scale of 0-10 using Player-0 as judge"""
+        return score_game_quality(player0_agent, game_history, game_outcome)
     def generate_experience_analysis(self, player1_agent, selected_experiences: List[Dict]) -> str:
         """
         Learning from Experience: Player-1 analyzes selected past experiences and draws conclusions.
         """
-        if not selected_experiences:
-            return ""
-        
-        # Save original system prompt
-        original_prompt = player1_agent.system_prompt
-        
-        try:
-            # Set system prompt for self-analysis
-            player1_agent.system_prompt = ("You are analyzing your own gameplay across multiple matches. "
-                                         "Synthesize your experiences into actionable insights. "
-                                         "Focus on patterns, strategies, and lessons learned.")
-            
-            analysis_prompt = "Analyze your past gameplay experiences and provide key insights:\n\n"
-            
-            for i, exp in enumerate(selected_experiences, 1):
-                outcome = exp.get('outcome', 'Unknown')
-                score = exp.get('score', 0)
-                analysis_prompt += f"Experience #{i} (Score: {score}/10, Outcome: {outcome}):\n"
-                
-                if 'moves' in exp and exp['moves']:
-                    last_move = exp['moves'][-1]
-                    analysis_prompt += f"Key move: {last_move.get('action', 'N/A')}\n"
-                
-                analysis_prompt += "\n"
-            
-            analysis_prompt += ("Based on these experiences, provide:\n"
-                              "1. Key patterns you've identified\n"
-                              "2. Successful strategies to continue\n"
-                              "3. Mistakes to avoid\n"
-                              "4. Strategic insights for future games\n\n"
-                              "Synthesize into actionable guidelines for improved performance.")
-            
-            analysis = player1_agent(analysis_prompt)
-            if analysis is None or "Error:" in analysis:
-                logger.error(f"Error getting experience analysis: {analysis}")
-                return "Error generating experience analysis"
-            
-            return analysis
-            
-        except Exception as e:
-            logger.error(f"Exception getting experience analysis: {type(e).__name__}: {str(e)}")
-            return f"Error: {type(e).__name__}: {str(e)}"
-        finally:
-            # Restore original system prompt
-            player1_agent.system_prompt = original_prompt
-    
+        return generate_experience_analysis(player1_agent, selected_experiences)    
     def select_top_histories_by_score(self, game_experiences: List[Dict], k: int = 3) -> List[Dict]:
         """
         Select top k histories from previous games based on simple scores.
@@ -227,13 +137,13 @@ class ExperienceDrivenExperiment:
         logger.info(f"Starting game round {game_round} for {game} with Player-1: {player1_model}")
         
         # Initialize agents
-        player0_agent = self.get_agent(self.player0_model, self.player0_port)
-        player1_agent = self.get_agent(player1_model, self.player1_port)
+        player0_agent = self.get_agent(self.player0_model, self.player0_port, is_player0=True)
+        player1_agent = self.get_agent(player1_model, self.player1_port, is_player0=False)
         
         # Initialize environment
-        env = ta.make(env_id=game)
-        env = ta.wrappers.LLMObservationWrapper(env=env)
-        env = ta.wrappers.SimpleRenderWrapper(
+        env = make(env_id=game)
+        env = wrappers.LLMObservationWrapper(env=env)
+        env = wrappers.SimpleRenderWrapper(
             env=env,
             player_names={0: "Player0", 1: "Player1"},
         )
@@ -453,14 +363,30 @@ def parse_games_input(games_str: str) -> List[str]:
 def main():
     parser = argparse.ArgumentParser(description="Experience-Driven Adaptation Experiment")
     parser.add_argument("--player1-model", type=str, required=True, help="Model name for Player-1 (evaluated model)")
-    parser.add_argument("--player1-path", type=str, required=True, help="Path to Player-1 model")
-    parser.add_argument("--player0-path", type=str, required=True, help="Path to Player-0 model")
+    parser.add_argument("--player1-path", type=str, required=False, help="Path to Player-1 model (for vLLM mode)")
+    parser.add_argument("--player0-path", type=str, required=False, help="Path to Player-0 model (for vLLM mode)")
     parser.add_argument("--games", type=str, required=True, help="Comma-separated list of games to evaluate")
     parser.add_argument("--output-file", type=str, required=True, help="Output JSON file path")
     parser.add_argument("--num-rounds", type=int, default=20, help="Number of rounds per game")
     parser.add_argument("--history-limit", type=int, default=None, help="Limit on history size for selection")
-    parser.add_argument("--gpu", type=int, default=4, help="Number of GPUs to use")
+    parser.add_argument("--gpu", type=int, default=4, help="Number of GPUs to use (vLLM mode)")
+    
+    # API mode arguments
+    parser.add_argument("--mode", type=str, default="vllm", choices=["vllm", "api"], 
+                       help="Mode: 'vllm' for local vLLM servers, 'api' for external API endpoints")
+    parser.add_argument("--player0-api-base", type=str, help="API base URL for Player-0 (API mode)")
+    parser.add_argument("--player0-api-key", type=str, help="API key for Player-0 (API mode, or set API_KEY_0 env var)")
+    parser.add_argument("--player1-api-base", type=str, help="API base URL for Player-1 (API mode)")
+    parser.add_argument("--player1-api-key", type=str, help="API key for Player-1 (API mode, or set API_KEY_1 env var)")
     args = parser.parse_args()
+    
+    # Validate arguments based on mode
+    if args.mode == "vllm":
+        if not args.player0_path or not args.player1_path:
+            parser.error("--player0-path and --player1-path are required for vLLM mode")
+    elif args.mode == "api":
+        if not args.player0_api_base or not args.player1_api_base:
+            parser.error("--player0-api-base and --player1-api-base are required for API mode")
     
     # Parse games
     try:
@@ -475,98 +401,103 @@ def main():
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
     
-    # Import and start vLLM servers (assuming utils are available)
-    try:
-        from utils.utils import start_vllm_server, stop_vllm_server
-        
-        server_processes = []
-        
-        # Start Player-0 server
-        logger.info(f"Starting vLLM server for Player-0 at {args.player0_path}...")
-        proc0 = start_vllm_server(
-            model_path=args.player0_path,
-            model_name="qwen2.5-32b-chat",
-            port=8020,
-            gpu=args.gpu
-        )
-        server_processes.append(proc0)
-        
-        # Start Player-1 server
-        logger.info(f"Starting vLLM server for Player-1 ({args.player1_model}) at {args.player1_path}...")
-        proc1 = start_vllm_server(
-            model_path=args.player1_path,
-            model_name=args.player1_model,
-            port=8010,
-            gpu=args.gpu
-        )
-        server_processes.append(proc1)
-        
+    server_processes = []
+    
+    if args.mode == "vllm":
+        # Import and start vLLM servers
         try:
-            # Run experiment
-            experiment = ExperienceDrivenExperiment(
-                player0_model="qwen2.5-32b-chat",
-                player0_port=8020,
-                player1_port=8010
+            # Start Player-0 server
+            logger.info(f"Starting vLLM server for Player-0 at {args.player0_path}...")
+            proc0 = start_vllm_server(
+                model_path=args.player0_path,
+                model_name="qwen2.5-32b-chat",
+                port=8020,
+                gpu=args.gpu
             )
-            results = experiment.run_experiment(
-                games=games,
-                player1_model=args.player1_model,
-                output_file=args.output_file,
-                num_rounds=args.num_rounds,
-                history_limit=args.history_limit
+            server_processes.append(proc0)
+            
+            # Start Player-1 server
+            logger.info(f"Starting vLLM server for Player-1 ({args.player1_model}) at {args.player1_path}...")
+            proc1 = start_vllm_server(
+                model_path=args.player1_path,
+                model_name=args.player1_model,
+                port=8010,
+                gpu=args.gpu
             )
+            server_processes.append(proc1)
             
-            # Print summary
-            print("\nExperience-Driven Experiment Results Summary:")
-            print("=" * 80)
+        except ImportError:
+            logger.error("Failed to import vLLM utilities")
+            sys.exit(1)
+    else:
+        logger.info(f"Using API mode with Player-0: {args.player0_api_base}, Player-1: {args.player1_api_base}")
+    
+    try:
+        # Run experiment
+        experiment = ExperienceDrivenExperiment(
+            player0_model="qwen2.5-32b-chat",
+            player0_port=8020,
+            player1_port=8010,
+            mode=args.mode,
+            player0_api_base=args.player0_api_base,
+            player0_api_key=args.player0_api_key,
+            player1_api_base=args.player1_api_base,
+            player1_api_key=args.player1_api_key
+        )
+        results = experiment.run_experiment(
+            games=games,
+            player1_model=args.player1_model,
+            output_file=args.output_file,
+            num_rounds=args.num_rounds,
+            history_limit=args.history_limit
+        )
+        
+        # Print summary
+        print("\nExperience-Driven Experiment Results Summary:")
+        print("=" * 80)
+        
+        # Group results by game
+        games_results = {}
+        for result in results:
+            game = result['game']
+            if game not in games_results:
+                games_results[game] = []
+            games_results[game].append(result)
+        
+        total_wins = 0
+        total_games = 0
+        total_score = 0
+        
+        for game, game_results in games_results.items():
+            wins = sum(1 for r in game_results if r["player1_won"])
+            win_rate = wins / len(game_results) if game_results else 0
+            avg_score = sum(r["score"] for r in game_results) / len(game_results) if game_results else 0
             
-            # Group results by game
-            games_results = {}
-            for result in results:
-                game = result['game']
-                if game not in games_results:
-                    games_results[game] = []
-                games_results[game].append(result)
+            print(f"\nGame: {game}")
+            print(f"Player-0 Model: qwen2.5-32b-chat")
+            print(f"Player-1 Model: {args.player1_model}")
+            print(f"Win Rate: {win_rate:.2%} ({wins}/{len(game_results)})")
+            print(f"Average Score: {avg_score:.1f}/10")
+            print("-" * 40)
             
-            total_wins = 0
-            total_games = 0
-            total_score = 0
-            
-            for game, game_results in games_results.items():
-                wins = sum(1 for r in game_results if r["player1_won"])
-                win_rate = wins / len(game_results) if game_results else 0
-                avg_score = sum(r["score"] for r in game_results) / len(game_results) if game_results else 0
-                
-                print(f"\nGame: {game}")
-                print(f"Player-0 Model: qwen2.5-32b-chat")
-                print(f"Player-1 Model: {args.player1_model}")
-                print(f"Win Rate: {win_rate:.2%} ({wins}/{len(game_results)})")
-                print(f"Average Score: {avg_score:.1f}/10")
-                print("-" * 40)
-                
-                total_wins += wins
-                total_games += len(game_results)
-                total_score += avg_score * len(game_results)
-            
-            # Overall statistics
-            overall_win_rate = total_wins / total_games if total_games > 0 else 0
-            overall_avg_score = total_score / total_games if total_games > 0 else 0
-            
-            print(f"\nOVERALL PERFORMANCE:")
-            print(f"Total Win Rate: {overall_win_rate:.2%} ({total_wins}/{total_games})")
-            print(f"Overall Average Score: {overall_avg_score:.1f}/10")
-            print(f"Results saved to: {args.output_file}")
-            
-        finally:
-            # Stop all vLLM servers
+            total_wins += wins
+            total_games += len(game_results)
+            total_score += avg_score * len(game_results)
+        
+        # Overall statistics
+        overall_win_rate = total_wins / total_games if total_games > 0 else 0
+        overall_avg_score = total_score / total_games if total_games > 0 else 0
+        
+        print(f"\nOVERALL PERFORMANCE:")
+        print(f"Total Win Rate: {overall_win_rate:.2%} ({total_wins}/{total_games})")
+        print(f"Overall Average Score: {overall_avg_score:.1f}/10")
+        print(f"Results saved to: {args.output_file}")
+        
+    finally:
+        # Stop all vLLM servers
+        if args.mode == "vllm":
             for proc in server_processes:
                 stop_vllm_server(proc)
-                
-    except ImportError:
-        logger.error("Could not import vLLM server utilities. Please ensure utils.utils is available.")
-        print("Error: Could not import vLLM server utilities.")
-        print("Please run the experiment manually by starting vLLM servers on ports 8010 and 8020")
-        print("Then run: python experience_driven_experiment.py --help for usage")
 
 if __name__ == "__main__":
     main()

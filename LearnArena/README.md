@@ -1,54 +1,9 @@
 # Unveiling the Learning Mind of Language Models: A Cognitive Framework and Empirical Study
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Arxiv](https://img.shields.io/badge/arXiv-2506.13464-b31b1b.svg)](https://arxiv.org/abs/2506.13464)
 
-
 LearnArena is a cognitively inspired benchmark for evaluating LLMs’ general learning abilities across three dimensions, Learning from Instructor, Learning from Concept, and Learning from Experience. It integrates interactive, conceptual, and experiential settings to test how models acquire, abstract, and adapt knowledge. By enabling consistent comparisons across open- and closed-source models, LearnArena provides a unified framework for assessing and advancing the learning capabilities of large language models.
-
-
-
-
-## 📁 Project Structure
-
-```
-learnarena/
-├── textarena/                            # Core game environment package
-│   ├── __init__.py
-│   ├── api.py
-│   ├── core.py
-│   ├── agents/                           # Agent implementations
-│   ├── envs/                             # Game environments
-│   │   ├── Checkers/
-│   │   ├── Poker/
-│   │   ├── SpellingBee/
-│   │   ├── TicTacToe/
-│   │   └── ... (other games)
-│   ├── utils/                            # Utility functions
-│   └── wrappers/                         # Environment wrappers
-│
-├── utils/                                # Shared utilities
-│   ├── __init__.py
-│   └── utils.py
-│
-├── learnarena_benchmark.py               # Main integrated benchmark
-├── run_learnarena_benchmark.sh           # Benchmark runner script
-│
-├── model_scale_experiment.py             # Learning from Concept
-├── run_learning_from_concept.sh          # LfC runner script
-│
-├── experience_driven_experiment.py       # Learning from Experience
-├── run_learning_from_experience.sh       # LfE runner script
-│
-├── setup.py                              # Package setup
-├── pyproject.toml                        # Modern package config
-├── requirements.txt                      # Dependencies
-├── install_env.sh                        # Installation script
-├── restructure.sh                        # Restructuring helper
-│
-└── logs/ results/ environment_summary/   # Output directories
-```
 
 ## 🚀 Installation
 
@@ -62,8 +17,8 @@ learnarena/
 
 ```bash
 # Clone the repository
-git clone https://github.com/zxia545/nips-learnarena.git
-cd nips-learnarena
+git clone https://github.com/microsoft/AnthropomorphicIntelligence.git
+cd LearnArena
 
 # Run the installation script
 bash install_env.sh
@@ -83,13 +38,27 @@ pip install -e .
 ### Verify Installation
 
 ```python
-import textarena as ta
-print(ta.__version__)
+from envs.registration import make
+from agents import OpenRouterAgent
+from wrappers import LLMObservationWrapper
+
+# Test environment creation
+env = make("TicTacToe-v0")
+print("LearnArena installation successful!")
 ```
 
 ## 🎯 Quick Start
 
-### 1. Start vLLM Servers
+### Running Modes
+
+LearnArena supports two execution modes:
+
+1. **vLLM Mode** (default): Run models locally using vLLM servers
+2. **API Mode**: Use external API endpoints (OpenAI, Anthropic, etc.)
+
+### Option 1: vLLM Mode (Local Models)
+
+#### 1. Start vLLM Servers
 
 Before running experiments, start vLLM servers for the models:
 
@@ -101,7 +70,7 @@ vllm serve qwen2.5-32b-chat --port 8000 --gpu-memory-utilization 0.9
 vllm serve your-model-name --port 8001 --gpu-memory-utilization 0.9
 ```
 
-### 2. Run the Main Benchmark
+#### 2. Run the Main Benchmark
 
 ```bash
 # Make sure you're in the root directory
@@ -112,6 +81,7 @@ Or run a specific configuration:
 
 ```bash
 python learnarena_benchmark.py \
+    --mode vllm \
     --player0-model "qwen2.5-32b-chat" \
     --player0-path "/path/to/qwen2.5-32b" \
     --player1-model "qwen2.5-7b-chat" \
@@ -122,13 +92,86 @@ python learnarena_benchmark.py \
     --gpu 4
 ```
 
-### 3. Explore Individual Experiments
+### Option 2: API Mode (External APIs)
+
+Use external API endpoints without requiring local GPUs:
+
+#### 1. Set API Keys (Recommended)
+
+```bash
+# Export API keys as environment variables
+export API_KEY_0="your-player0-api-key"  # For Player-0
+export API_KEY_1="your-player1-api-key"  # For Player-1
+```
+
+#### 2. Run with API Mode
+
+```bash
+python learnarena_benchmark.py \
+    --mode api \
+    --player0-model "gpt-4" \
+    --player0-api-base "https://api.openai.com/v1" \
+    --player1-model "gpt-3.5-turbo" \
+    --player1-api-base "https://api.openai.com/v1" \
+    --games "TicTacToe-v0,Checkers-v0,Poker-v0" \
+    --output-file "results/benchmark_results.json" \
+    --num-rounds 20
+```
+
+**Alternative**: Pass API keys directly (less secure):
+```bash
+python learnarena_benchmark.py \
+    --mode api \
+    --player0-model "gpt-4" \
+    --player0-api-base "https://api.openai.com/v1" \
+    --player0-api-key "your-key-here" \
+    --player1-model "gpt-3.5-turbo" \
+    --player1-api-base "https://api.openai.com/v1" \
+    --player1-api-key "your-key-here" \
+    --games "TicTacToe-v0" \
+    --output-file "results/benchmark_results.json" \
+    --num-rounds 20
+```
+
+#### 3. Example API Mode Scripts
+
+We provide example scripts for running experiments with external APIs:
+
+```bash
+# Main benchmark with APIs
+bash run_learnarena_api_example.sh
+
+# Learning from Concept with APIs
+bash run_concept_api_example.sh
+
+# Learning from Experience with APIs
+bash run_experience_api_example.sh
+```
+
+**Note**: Edit these scripts to configure your API endpoints and keys before running.
+
+### Individual Experiments
 
 Each experiment type has its own Python script and shell runner in the root directory:
 
-- **Main Benchmark**: `learnarena_benchmark.py` + `run_learnarena_benchmark.sh`
-- **Learning from Concept**: `model_scale_experiment.py` + `run_learning_from_concept.sh`
-- **Learning from Experience**: `experience_driven_experiment.py` + `run_learning_from_experience.sh`
+- **Main Benchmark**: `learnarena_benchmark.py` + `run_learnarena_benchmark.sh` (vLLM) / `run_learnarena_api_example.sh` (API)
+- **Learning from Concept**: `model_scale_experiment.py` + `run_learning_from_concept.sh` (vLLM) / `run_concept_api_example.sh` (API)
+- **Learning from Experience**: `experience_driven_experiment.py` + `run_learning_from_experience.sh` (vLLM) / `run_experience_api_example.sh` (API)
+
+## 🔑 API Key Management
+
+For security, we recommend using environment variables for API keys:
+
+```bash
+# Add to your ~/.bashrc or ~/.zshrc
+export API_KEY_0="your-player0-api-key"
+export API_KEY_1="your-player1-api-key"
+
+# Or set temporarily for a session
+export API_KEY_0="sk-..." API_KEY_1="sk-..." && python learnarena_benchmark.py --mode api ...
+```
+
+The code automatically reads from `API_KEY_0` (Player-0) and `API_KEY_1` (Player-1) environment variables when `--mode api` is used without explicit `--player0-api-key` or `--player1-api-key` arguments.
 
 ## 🎮 Experiment Types and Scripts
 
@@ -151,8 +194,10 @@ The main benchmark that evaluates all three learning dimensions simultaneously i
 
 **Command-Line Arguments:**
 
+**vLLM Mode:**
 ```bash
 python learnarena_benchmark.py \
+    --mode vllm \
     --player0-model "qwen2.5-32b-chat"              # Instructor model name
     --player0-path "/path/to/qwen2.5-32b"           # Path to Player-0 model
     --player1-model "qwen2.5-7b-chat"               # Student model name
@@ -161,6 +206,24 @@ python learnarena_benchmark.py \
     --output-file "results/benchmark.jsonl"          # Output file path
     --num-rounds 20                                  # Rounds per game (default: 20)
     --gpu 4                                          # Number of GPUs to use
+```
+
+**API Mode:**
+```bash
+# Set API keys first
+export API_KEY_0="your-player0-api-key"
+export API_KEY_1="your-player1-api-key"
+
+python learnarena_benchmark.py \
+    --mode api \
+    --player0-model "gpt-4"                          # Player-0 model name
+    --player0-api-base "https://api.openai.com/v1"  # Player-0 API endpoint
+    --player1-model "gpt-3.5-turbo"                  # Player-1 model name
+    --player1-api-base "https://api.openai.com/v1"  # Player-1 API endpoint
+    --games "TicTacToe-v0,Checkers-v0,Poker-v0"     # Comma-separated games
+    --output-file "results/benchmark.jsonl"          # Output file path
+    --num-rounds 20                                  # Rounds per game
+    # Optional: --player0-api-key and --player1-api-key if not using env vars
 ```
 
 **Output Format:** JSONL with fields including `game`, `round`, `player0_model`, `player1_model`, `learning_enabled`, `rewards`, `outcome`, `moves`, `instructor_feedback`, `score`, `game_summary`, `selected_experience_info`.
@@ -207,13 +270,11 @@ bash run_learnarena_benchmark.sh
 GAMES="TicTacToe-v0,Poker-v0" NUM_ROUNDS=10 bash run_learnarena_benchmark.sh
 ```
 
-
 **Output:**
 
 - Individual results: `learnarena_results/{model_name}/benchmark_{model_name}.jsonl`
 - Summary: `learnarena_results/comprehensive_summary.txt`
 - Logs: `logs/learnarena_benchmark_*.log`
-
 
 ---
 
@@ -417,7 +478,7 @@ results/experience_experiments/
 **Features:**
 
 - Creates conda environment with Python 3.10
-- Installs textarena package in editable mode
+- Installs learnarena package in editable mode
 - Sets up all required dependencies
 - Provides usage instructions after installation
 
@@ -431,32 +492,17 @@ bash install_env.sh
 
 1. Activates base conda environment
 2. Creates new `learnarena` conda environment
-3. Installs the `textarena` package from `./textarena` directory
+3. Installs the `learnarena` package with all components (agents, envs, wrappers, etc.)
 4. Displays usage instructions for all experiment scripts
 
 **Post-Installation:**
 
 ```bash
 conda activate learnarena
-python -c "import textarena as ta; print(ta.__version__)"
+python -c "from envs.registration import make; env = make('TicTacToe-v0'); print('LearnArena ready!')"
 ```
 
 ---
-
-## 📊 Quick Reference: All Scripts
-
-
-| Script                            | Type   | Purpose                              | Input                   | Output                               |
-| --------------------------------- | ------ | ------------------------------------ | ----------------------- | ------------------------------------ |
-| `learnarena_benchmark.py`         | Python | Integrated benchmark (LfI+LfC+LfE)   | Model paths, games list | JSONL with all learning metrics      |
-| `run_learnarena_benchmark.sh`     | Shell  | Batch runner for main benchmark      | Edit config in script   | Results per model + summary          |
-| `model_scale_experiment.py`       | Python | Learning from Concept experiments    | Model paths, games list | JSON with/without concept comparison |
-| `run_learning_from_concept.sh`    | Shell  | Batch LfC across model scales        | Edit config in script   | Results per model                    |
-| `experience_driven_experiment.py` | Python | Learning from Experience experiments | Model paths, games list | JSONL with experience selection      |
-| `run_learning_from_experience.sh` | Shell  | Batch LfE across model scales        | Edit config in script   | Organized results by model pair      |
-| `install_env.sh`                  | Shell  | Environment setup                    | None                    | Installed conda environment          |
-
-
 
 ## 🎲 Available Games
 
@@ -535,10 +581,7 @@ Results are saved in JSON/JSONL format:
 }
 ```
 
-
-
-
-##  Key Differences Between Experiments
+## Key Differences Between Experiments
 
 Understanding which script to use for your research question:
 
@@ -555,8 +598,6 @@ Understanding which script to use for your research question:
 | **Typical Runtime**     | Longest (all features)        | Medium                      | Medium                            |
 | **Model Requirements**  | 2 models + servers            | 2 models + servers          | 2 models + servers                |
 
-
-
 ## 🀽 Citation
 
 If you use LearnArena in your research, please cite:
@@ -569,13 +610,6 @@ If you use LearnArena in your research, please cite:
   year={2025}
 }
 ```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
-
 
 ## 🙏 Acknowledgments
 

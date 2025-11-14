@@ -1,0 +1,2 @@
+import learnarena_utils.jury 
+import learnarena_utils.word_lists
