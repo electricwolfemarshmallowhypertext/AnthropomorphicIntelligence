@@ -10,7 +10,7 @@ import logging
 import time
 from typing import Dict, List, Tuple, Optional
 import re
-from utils.utils import (
+from LearnArena.learnarena_utils.utils import (
     create_agent,
     score_game_quality,
     generate_experience_analysis,
