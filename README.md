@@ -12,6 +12,7 @@
 * [Techniques & Sub-Projects](#techniques--sub-projects)
   * [1. PCC: Embedding-based Context Compression](#1-pcc-embedding-based-context-compression)
   * [2. MotiveBench: Benchmarking Human-like Motivation](#2-motivebench-benchmarking-human-like-motivation) 
+  * [3. SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](#3-socialcc-interactive-evaluation-for-cultural-competence-in-language-agents) 
 * [Contributing](#contributing) 
 * [Contact](#contact)
 
@@ -60,6 +61,19 @@ This repository gathers and develops various techniques that contribute toward t
 * 200 rich contextual scenarios and 600 reasoning tasks
 * Multiple levels of motivation, including motivation reasoning, behavior reasoning, and behavior prediction.
 * Cross-model benchmarking and insights
+
+---
+
+
+### 3. [SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](./SocialCC/README.md)
+
+**SocialCC**  is a novel benchmark designed to evaluate cultural competence through multi-turn interactive intercultural scenarios. It comprises 3,060 human-written scenarios spanning 60 countries across six continents. Through extensive experiments on eight prominent LLMs, our findings reveal a significant gap between the cultural knowledge stored in these models and their ability to apply it effectively in cross-cultural communication.
+
+**Key Features:**
+* 3,060 diverse intercultural scenarios spanning 60 countries across six continents.
+* Three core evaluation dimensions: cultural awareness, cultural knowledge, and cultural behaviour.
+* Interactive multi-turn assessment that measures cultural competence in dynamic, context-rich social interactions.
+* Comprehensive cross-model analysis identifying misinterpretation of implicit cultural cues and inconsistent handling of value conflictss.
 
 ---
 
