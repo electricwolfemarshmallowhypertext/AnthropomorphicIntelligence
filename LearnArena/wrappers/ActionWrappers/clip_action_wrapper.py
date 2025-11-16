@@ -6,7 +6,6 @@ Original work:
 Copyright (c) 2025 Leon Guertler and contributors
 Licensed under the MIT License.
 """
-
 from core import ActionWrapper, Env
 
 __all__ = ["ClipWordsActionWrapper", "ClipCharactersActionWrapper"]

@@ -11,3 +11,4 @@ numpy
 pandas
 torch
 transformers
+textarena

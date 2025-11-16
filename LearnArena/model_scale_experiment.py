@@ -1,6 +1,6 @@
 from pathlib import Path
-from envs.registration import make
-import agents
+# import textarena
+from textarena.envs.registration import make
 import wrappers
 import json
 import os
@@ -8,13 +8,17 @@ import argparse
 import logging
 import time
 from typing import Dict, List, Tuple, Optional
-from learnarena_utils.utils import (
+from utils.utils import (
     create_agent,
     get_game_summary,
     start_vllm_server,
-    stop_vllm_server
+    start_vllm_server_with_gpus,
+    stop_vllm_server,
+    allocate_gpus,
 )
 
+if not os.path.exists('logs'):
+    os.makedirs('logs')
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
@@ -152,24 +156,49 @@ def main():
     
     if args.mode == "vllm":
         # Start vLLM servers for both models
+        gpu_allocations = []
+        if args.gpu >= 2:
+            try:
+                gpu_allocations = allocate_gpus(args.gpu, 2)
+                logger.info(f"Allocated GPUs for vLLM servers: {gpu_allocations}")
+            except ValueError as e:
+                logger.warning(f"GPU allocation failed ({e}); falling back to shared configuration.")
+                gpu_allocations = []
+
         # Start Player-0 server
         logger.info(f"Starting vLLM server for Player-0 ({args.player0_model}) at {args.player0_path}...")
-        proc0 = start_vllm_server(
-            model_path=args.player0_path,
-            model_name=args.player0_model,
-            port=8000,
-            gpu=args.gpu
-        )
+        if gpu_allocations:
+            proc0 = start_vllm_server_with_gpus(
+                model_path=args.player0_path,
+                model_name=args.player0_model,
+                port=8000,
+                gpus=gpu_allocations[0]
+            )
+        else:
+            proc0 = start_vllm_server(
+                model_path=args.player0_path,
+                model_name=args.player0_model,
+                port=8000,
+                gpu=args.gpu
+            )
         server_processes.append(proc0)
         
         # Start Player-1 server
         logger.info(f"Starting vLLM server for Player-1 ({args.player1_model}) at {args.player1_path}...")
-        proc1 = start_vllm_server(
-            model_path=args.player1_path,
-            model_name=args.player1_model,
-            port=8001,
-            gpu=args.gpu
-        )
+        if gpu_allocations:
+            proc1 = start_vllm_server_with_gpus(
+                model_path=args.player1_path,
+                model_name=args.player1_model,
+                port=8001,
+                gpus=gpu_allocations[1]
+            )
+        else:
+            proc1 = start_vllm_server(
+                model_path=args.player1_path,
+                model_name=args.player1_model,
+                port=8001,
+                gpu=args.gpu
+            )
         server_processes.append(proc1)
     else:
         logger.info(f"Using API mode with Player-0: {args.player0_api_base}, Player-1: {args.player1_api_base}")

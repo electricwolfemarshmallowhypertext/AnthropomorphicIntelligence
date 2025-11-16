@@ -1,7 +1,6 @@
 from pathlib import Path
 import sys
-from envs.registration import make
-import agents
+from textarena.envs.registration import make
 import wrappers
 import json
 import os
@@ -9,14 +8,18 @@ import argparse
 import logging
 import time
 from typing import Dict, List, Tuple, Optional
-import re
-from learnarena_utils.utils import (
+from utils.utils import (
     create_agent,
     score_game_quality,
     generate_experience_analysis,
     start_vllm_server,
-    stop_vllm_server
+    start_vllm_server_with_gpus,
+    stop_vllm_server,
+    allocate_gpus,
 )
+
+if not os.path.exists('logs'):
+    os.makedirs('logs')
 
 # Set up logging
 logging.basicConfig(
@@ -362,6 +365,7 @@ def parse_games_input(games_str: str) -> List[str]:
 
 def main():
     parser = argparse.ArgumentParser(description="Experience-Driven Adaptation Experiment")
+    parser.add_argument("--player0-model", type=str, default="qwen2.5-32b-chat", help="Model name for Player-0 (instructor/judge)")
     parser.add_argument("--player1-model", type=str, required=True, help="Model name for Player-1 (evaluated model)")
     parser.add_argument("--player1-path", type=str, required=False, help="Path to Player-1 model (for vLLM mode)")
     parser.add_argument("--player0-path", type=str, required=False, help="Path to Player-0 model (for vLLM mode)")
@@ -406,24 +410,49 @@ def main():
     if args.mode == "vllm":
         # Import and start vLLM servers
         try:
+            gpu_allocations = []
+            if args.gpu >= 2:
+                try:
+                    gpu_allocations = allocate_gpus(args.gpu, 2)
+                    logger.info(f"Allocated GPUs for vLLM servers: {gpu_allocations}")
+                except ValueError as e:
+                    logger.warning(f"GPU allocation failed ({e}); falling back to shared configuration.")
+                    gpu_allocations = []
+            
             # Start Player-0 server
-            logger.info(f"Starting vLLM server for Player-0 at {args.player0_path}...")
-            proc0 = start_vllm_server(
-                model_path=args.player0_path,
-                model_name="qwen2.5-32b-chat",
-                port=8020,
-                gpu=args.gpu
-            )
+            logger.info(f"Starting vLLM server for Player-0 ({args.player0_model}) at {args.player0_path}...")
+            if gpu_allocations:
+                proc0 = start_vllm_server_with_gpus(
+                    model_path=args.player0_path,
+                    model_name=args.player0_model,
+                    port=8020,
+                    gpus=gpu_allocations[0]
+                )
+            else:
+                proc0 = start_vllm_server(
+                    model_path=args.player0_path,
+                    model_name=args.player0_model,
+                    port=8020,
+                    gpu=args.gpu
+                )
             server_processes.append(proc0)
             
             # Start Player-1 server
             logger.info(f"Starting vLLM server for Player-1 ({args.player1_model}) at {args.player1_path}...")
-            proc1 = start_vllm_server(
-                model_path=args.player1_path,
-                model_name=args.player1_model,
-                port=8010,
-                gpu=args.gpu
-            )
+            if gpu_allocations:
+                proc1 = start_vllm_server_with_gpus(
+                    model_path=args.player1_path,
+                    model_name=args.player1_model,
+                    port=8010,
+                    gpus=gpu_allocations[1]
+                )
+            else:
+                proc1 = start_vllm_server(
+                    model_path=args.player1_path,
+                    model_name=args.player1_model,
+                    port=8010,
+                    gpu=args.gpu
+                )
             server_processes.append(proc1)
             
         except ImportError:
@@ -435,7 +464,7 @@ def main():
     try:
         # Run experiment
         experiment = ExperienceDrivenExperiment(
-            player0_model="qwen2.5-32b-chat",
+            player0_model=args.player0_model,
             player0_port=8020,
             player1_port=8010,
             mode=args.mode,
@@ -474,7 +503,7 @@ def main():
             avg_score = sum(r["score"] for r in game_results) / len(game_results) if game_results else 0
             
             print(f"\nGame: {game}")
-            print(f"Player-0 Model: qwen2.5-32b-chat")
+            print(f"Player-0 Model: {args.player0_model}")
             print(f"Player-1 Model: {args.player1_model}")
             print(f"Win Rate: {win_rate:.2%} ({wins}/{len(game_results)})")
             print(f"Average Score: {avg_score:.1f}/10")

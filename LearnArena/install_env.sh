@@ -18,6 +18,4 @@ conda activate learnarena
 # Install the package in editable mode
 echo "Installing learnarena package..."
 
-pip install -e .
-
 pip install -r requirements.txt

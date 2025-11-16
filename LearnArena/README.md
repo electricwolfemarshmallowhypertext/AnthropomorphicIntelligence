@@ -31,8 +31,8 @@ bash install_env.sh
 conda create -n learnarena python=3.10 -y
 conda activate learnarena
 
-# Install the package
-pip install -e .
+# Install all required package
+pip install -r requirements.txt
 ```
 
 ### Verify Installation
@@ -470,43 +470,6 @@ results/experience_experiments/
 - **With Experience**: Later rounds use top-3 past experiences for learning
 - **Progressive Learning**: Experience pool grows with each game
 
----
-
-### 4. Installation and Setup Script
-
-#### Shell Script: `install_env.sh`
-
-**Purpose:** Automated installation of LearnArena and all dependencies.
-
-**Features:**
-
-- Creates conda environment with Python 3.10
-- Installs learnarena package in editable mode
-- Sets up all required dependencies
-- Provides usage instructions after installation
-
-**How to Run:**
-
-```bash
-bash install_env.sh
-```
-
-**What It Does:**
-
-1. Activates base conda environment
-2. Creates new `learnarena` conda environment
-3. Installs the `learnarena` package with all components (agents, envs, wrappers, etc.)
-4. Displays usage instructions for all experiment scripts
-
-**Post-Installation:**
-
-```bash
-conda activate learnarena
-python -c "from envs.registration import make; env = make('TicTacToe-v0'); print('LearnArena ready!')"
-```
-
----
-
 ## 🎲 Available Games
 
 LearnArena includes 8+ competitive text-based games from the TextArena suite:
@@ -613,12 +576,6 @@ If you use LearnArena in your research, please cite:
   year={2025}
 }
 ```
-
-## 🔧 Implementation Notes
-
-LearnArena builds on top of the TextArena framework for text-based game environments.
-We reuse and adapt several environment and wrapper components (e.g., `./core.py`) and extend them to support
-cognitively-inspired learning settings (Learning from Instructor, Concept, and Experience).
 
 ## 🙏 Acknowledgments
 
