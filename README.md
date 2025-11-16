@@ -70,7 +70,7 @@ This repository gathers and develops various techniques that contribute toward t
 ---
 
 
-### 3. [SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](https://github.com/microsoft/AnthropomorphicIntelligence/blob/main/SocialCC/README.md)
+### 3. [SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](./SocialCC/README.md)
 
 
 
