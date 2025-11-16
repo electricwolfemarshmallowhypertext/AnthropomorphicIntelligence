@@ -1,5 +1,5 @@
 """
-This file is adapted from TextArena:
+This code is from TextArena:
 https://github.com/LeonGuertler/TextArena
 
 Original work:

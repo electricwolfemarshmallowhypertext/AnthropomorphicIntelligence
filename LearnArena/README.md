@@ -617,8 +617,7 @@ If you use LearnArena in your research, please cite:
 ## 🔧 Implementation Notes
 
 LearnArena builds on top of the TextArena framework for text-based game environments.
-We reuse and adapt several environment and wrapper components (e.g., `core.py`,
-registration utilities, and game specifications) and extend them to support
+We reuse and adapt several environment and wrapper components (e.g., `./core.py`) and extend them to support
 cognitively-inspired learning settings (Learning from Instructor, Concept, and Experience).
 
 ## 🙏 Acknowledgments
