@@ -8,7 +8,7 @@ import argparse
 import logging
 import time
 from typing import Dict, List, Tuple, Optional
-from LearnArena.learnarena_utils.utils import (
+from utils.utils import (
     create_agent,
     get_game_summary,
     start_vllm_server,
