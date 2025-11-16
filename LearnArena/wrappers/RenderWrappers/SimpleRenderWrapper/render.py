@@ -1,3 +1,12 @@
+"""
+This file is adapted from TextArena:
+https://github.com/LeonGuertler/TextArena
+
+Original work:
+Copyright (c) 2025 Leon Guertler and contributors
+Licensed under the MIT License.
+"""
+
 import re, shutil, time, rich, rich.layout
 from typing import Dict, Optional, Tuple
 from core import Env, Message, Info, RenderWrapper, State

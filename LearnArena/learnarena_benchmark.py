@@ -9,7 +9,7 @@ import argparse
 import logging
 import time
 from typing import Dict, List, Tuple, Optional
-from utils.utils import (
+from learnarena_utils.utils import (
     create_agent,
     get_game_summary,
     score_game_quality,

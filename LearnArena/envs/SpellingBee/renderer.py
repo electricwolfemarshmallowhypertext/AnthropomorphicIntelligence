@@ -1,3 +1,12 @@
+"""
+This file is adapted from TextArena:
+https://github.com/LeonGuertler/TextArena
+
+Original work:
+Copyright (c) 2025 Leon Guertler and contributors
+Licensed under the MIT License.
+"""
+
 def create_board_str(game_state: dict) -> str:
     allowed_letters = sorted(game_state.get("allowed_letters", []))
     word_history = game_state.get("word_history", [])

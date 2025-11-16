@@ -1,3 +1,12 @@
+"""
+This file is adapted from TextArena:
+https://github.com/LeonGuertler/TextArena
+
+Original work:
+Copyright (c) 2025 Leon Guertler and contributors
+Licensed under the MIT License.
+"""
+
 import json, os, re, random
 import importlib.resources
 from typing import Optional, Tuple, Dict, Any
@@ -49,8 +58,9 @@ class TruthAndDeceptionEnv(Env):
                 with open(data_path, "r", encoding="utf-8") as file:
                     self.facts_data = json.load(file)
             else:
-                # Use package resource
-                with importlib.resources.files('textarena.envs.TruthAndDeception').joinpath('facts.json').open('r') as file:
+                # Use local package resource (installed as envs.TruthAndDeception)
+                facts_file = importlib.resources.files(__package__).joinpath('facts.json')
+                with facts_file.open('r', encoding="utf-8") as file:
                     self.facts_data = json.load(file)
         except Exception as e:
             raise FileNotFoundError(f"Failed to load facts data: {str(e)}")

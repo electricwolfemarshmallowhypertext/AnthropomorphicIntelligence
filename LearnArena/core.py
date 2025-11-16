@@ -1,3 +1,12 @@
+"""
+Portions of this file are adapted from TextArena:
+https://github.com/LeonGuertler/TextArena
+
+Original work:
+Copyright (c) 2025 Leon Guertler and contributors
+Licensed under the MIT License.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Tuple, Optional, Callable
 

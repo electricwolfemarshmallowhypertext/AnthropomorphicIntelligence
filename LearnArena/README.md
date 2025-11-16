@@ -119,6 +119,7 @@ python learnarena_benchmark.py \
 ```
 
 **Alternative**: Pass API keys directly (less secure):
+
 ```bash
 python learnarena_benchmark.py \
     --mode api \
@@ -195,6 +196,7 @@ The main benchmark that evaluates all three learning dimensions simultaneously i
 **Command-Line Arguments:**
 
 **vLLM Mode:**
+
 ```bash
 python learnarena_benchmark.py \
     --mode vllm \
@@ -209,6 +211,7 @@ python learnarena_benchmark.py \
 ```
 
 **API Mode:**
+
 ```bash
 # Set API keys first
 export API_KEY_0="your-player0-api-key"
@@ -610,6 +613,13 @@ If you use LearnArena in your research, please cite:
   year={2025}
 }
 ```
+
+## 🔧 Implementation Notes
+
+LearnArena builds on top of the TextArena framework for text-based game environments.
+We reuse and adapt several environment and wrapper components (e.g., `core.py`,
+registration utilities, and game specifications) and extend them to support
+cognitively-inspired learning settings (Learning from Instructor, Concept, and Experience).
 
 ## 🙏 Acknowledgments
 

@@ -1,3 +1,12 @@
+"""
+This file is adapted from TextArena:
+https://github.com/LeonGuertler/TextArena
+
+Original work:
+Copyright (c) 2025 Leon Guertler and contributors
+Licensed under the MIT License.
+"""
+
 from typing import List, Dict, Tuple
 
 def card_block(rank: str, suit: str) -> List[str]:

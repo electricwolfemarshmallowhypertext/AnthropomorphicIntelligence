@@ -1,3 +1,11 @@
+"""
+This file is adapted from TextArena:
+https://github.com/LeonGuertler/TextArena
+
+Original work:
+Copyright (c) 2025 Leon Guertler and contributors
+Licensed under the MIT License.
+"""
 import core
 from core import ObservationWrapper, Env, Observations, Info
 from typing import Dict, Optional, Tuple, List

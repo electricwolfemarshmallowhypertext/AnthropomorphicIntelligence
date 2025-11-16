@@ -1,4 +1,11 @@
-"""Utils for Word Lists, common to language games. (by Dilan Hillier)"""
+"""
+This file is adapted from TextArena:
+https://github.com/LeonGuertler/TextArena
+
+Original work:
+Copyright (c) 2025 Leon Guertler and contributors
+Licensed under the MIT License.
+"""
 
 import importlib.resources
 import re
@@ -94,13 +101,13 @@ class EnglishDictionary:
     ) -> set[str]:
         """Load words from a .dic file inside the package's data folder."""
         with (
-            importlib.resources.files("textarena.utils.data")
+            importlib.resources.files("learnarena_utils.data")
             .joinpath(filename)
             .open("r") as f
         ):
             lines = f.readlines()[1:]  # Skip first line (word count)
         with (
-            importlib.resources.files("textarena.utils.data")
+            importlib.resources.files("learnarena_utils.data")
             .joinpath(acc_filename)
             .open("r") as f
         ):
