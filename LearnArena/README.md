@@ -468,82 +468,6 @@ results/experience_experiments/
 - **With Experience**: Later rounds use top-3 past experiences for learning
 - **Progressive Learning**: Experience pool grows with each game
 
-## 🎲 Available Games
-
-LearnArena includes 8+ competitive text-based games from the TextArena suite:
-
-
-| Game                     | Category   | Description                                 |
-| ------------------------ | ---------- | ------------------------------------------- |
-| **TicTacToe-v0**         | Classic    | 3x3 grid game requiring tactical planning   |
-| **Checkers-v0**          | Board Game | Traditional checkers with complex strategy  |
-| **Poker-v0**             | Card Game  | Texas Hold'em variant with betting          |
-| **Stratego-v0**          | Strategy   | Military board game with hidden information |
-| **TruthAndDeception-v0** | Social     | Deduction game requiring theory of mind     |
-| **SpellingBee-v0**       | Word Game  | Word spelling challenge                     |
-| **SpiteAndMalice-v0**    | Card Game  | Competitive patience/solitaire variant      |
-| **Tak-v0**               | Abstract   | Modern abstract strategy game               |
-| **WordChains-v0**        | Word Game  | Word association challenge                  |
-| **UltimateTicTacToe-v0** | Classic    | Meta-game variant of TicTacToe              |
-
-Each game tests different cognitive abilities:
-
-- **Strategic Planning**: Checkers, Stratego, Tak
-- **Hidden Information**: Poker, Stratego
-- **Social Reasoning**: TruthAndDeception
-- **Language Skills**: SpellingBee, WordChains
-- **Tactical Thinking**: TicTacToe, UltimateTicTacToe
-
-## 🀽 Configuration
-
-### Key Configuration Options
-
-**Model Configuration:**
-
-```python
---player0-model "qwen2.5-32b-chat"  # Teacher/evaluator model
---player0-path "/path/to/model"      # Path to model weights
---player1-model "your-model"         # Student model to evaluate
---player1-path "/path/to/model"      # Path to model weights
-```
-
-**Experiment Configuration:**
-
-```python
---games "Game1-v0,Game2-v0"  # Comma-separated game list
---num-rounds 20               # Rounds per game (default: 20)
---gpu 4                       # Number of GPUs to use
---output-file "results.json"  # Output file path
-```
-
-**Learning Configuration:**
-
-```python
---disable-learning            # Disable learning for baseline
---player0-port 8000          # Player-0 server port
---player1-port 8001          # Player-1 server port
-```
-
-### Output Format
-
-Results are saved in JSON/JSONL format:
-
-```json
-{
-  "game": "TicTacToe-v0",
-  "round": 1,
-  "player0_model": "qwen2.5-32b-chat",
-  "player1_model": "qwen2.5-7b-chat",
-  "learning_enabled": true,
-  "rewards": [0, 1],
-  "outcome": "Player 1 won",
-  "player1_won": true,
-  "moves": [...],
-  "instructor_feedback": "...",
-  "game_summary": "...",
-  "score": 7
-}
-```
 
 ## Key Differences Between Experiments
 
@@ -567,10 +491,10 @@ Understanding which script to use for your research question:
 If you use LearnArena in your research, please cite:
 
 ```bibtex
-@article{hu2025unveiling,
+@article{gadre2023datacomp,
   title={Unveiling the Learning Mind of Language Models: A Cognitive Framework and Empirical Study},
   author={Hu, Zhengyu and Lian, Jianxun and Xiao, Zheyuan and Zhang, Seraphina and Wang, Tianfu and Yuan, Nicholas Jing and Xie, Xing and Xiong, Hui},
-  journal={arXiv preprint arXiv:2506.13464},
+  journal={Advances in Neural Information Processing Systems},  
   year={2025}
 }
 ```
