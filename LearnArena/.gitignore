@@ -5,3 +5,4 @@ __pycache__/
 environment_summary/
 learnarena_results/
 .vscode/
+.history/

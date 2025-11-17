@@ -1,7 +1,6 @@
 from pathlib import Path
-# import textarena
 from textarena.envs.registration import make
-import wrappers
+from textarena import wrappers
 import json
 import os
 import argparse

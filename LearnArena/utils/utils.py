@@ -2,11 +2,127 @@
 import os
 import time
 import requests
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import subprocess
 
+STANDARD_GAME_PROMPT = "You are a competitive game player. Make sure you read the game instructions carefully, and always follow the required format."
+class LLMAgent():
+    """ Agent class using the OpenAI API to generate responses. """
+    def __init__(self, model_name: str, system_prompt: Optional[str] = STANDARD_GAME_PROMPT, verbose: bool = False, api_base: Optional[str] = None, api_key: Optional[str] = None, timeout: int = 30, **kwargs):
+        """
+        Initialize the LLM agent.
 
+        Args:
+            model_name (str): The name of the model.
+            system_prompt (Optional[str]): The system prompt to use (default: STANDARD_GAME_PROMPT)
+            verbose (bool): If True, additional debug info will be printed.
+            api_base (Optional[str]): The base URL for the OpenAI API.
+            api_key (Optional[str]): The API key for the OpenAI API.
+            timeout (int): Timeout in seconds for each request (default: 30)
+            **kwargs: Additional keyword arguments to pass to the OpenAI API call.
+        """
+        self.model_name = model_name 
+        self.verbose = verbose 
+        self.system_prompt = system_prompt
+        self.kwargs = kwargs
+        self.timeout = timeout
+        self._current_request = None
 
+        try:
+            from openai import OpenAI
+            import threading
+        except ImportError:
+            raise ImportError(
+                "OpenAI package is required for LLMAgent. "
+                "Install it with: pip install openai"
+            )
+
+        # Use provided API key or get from environment variable
+        if api_key is None:
+            api_key = os.getenv("OPEN_API_KEY")
+            if not api_key:
+                raise ValueError("OpenAI API key not found. Please set the OPEN_API_KEY environment variable or provide it directly.")
+        
+        # Use provided API base or default to localhost
+        if api_base is None:
+            api_base = "http://localhost:8010/v1"
+        
+        self.client = OpenAI(base_url=api_base, api_key=api_key)
+        
+
+    def _make_request(self, observation: str) -> str:
+        """ Make a single API request and return the generated message. """
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": observation}
+        ]
+
+        # Cancel any existing request
+        if self._current_request is not None:
+            try:
+                self._current_request.cancel()
+            except:
+                pass
+
+        try:
+            # Create a new request with timeout
+            self._current_request = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                n=1,
+                timeout=self.timeout,
+                **self.kwargs
+            )
+            response = self._current_request
+            self._current_request = None
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            self._current_request = None
+            if "timeout" in str(e).lower():
+                raise TimeoutError(f"Request timed out after {self.timeout} seconds")
+            raise e
+
+    def _retry_request(self, observation: str, retries: int = 5, delay: int = 5) -> str:
+        """
+        Attempt to make an API request with retries.
+
+        Args:
+            observation (str): The input to process.
+            retries (int): The number of attempts to try (default: 5).
+            delay (int): Seconds to wait between attempts.
+
+        Raises:
+            Exception: The last exception caught if all retries fail.
+        """
+        last_exception = None
+        for attempt in range(1, retries + 1):
+            try:
+                response = self._make_request(observation)
+                if self.verbose:
+                    print(f"\nObservation: {observation}\nResponse: {response}")
+                return response
+
+            except Exception as e:
+                last_exception = e
+                print(f"Attempt {attempt} failed with error: {e}")
+                if attempt < retries:
+                    time.sleep(delay)
+        raise last_exception
+
+    def __call__(self, observation: str) -> str:
+        """
+        Process the observation using the OpenRouter API and return the action.
+
+        Args:
+            observation (str): The input string to process.
+
+        Returns:
+            str: The generated response.
+        """
+        if not isinstance(observation, str):
+            raise ValueError(f"Observation must be a string. Received type: {type(observation)}")
+        return self._retry_request(observation)
+    
 
 def start_vllm_server(model_path: str, model_name: str, port: int, gpu: int = 1):
     """
@@ -154,7 +270,6 @@ def create_agent(model_name: str, port: int, mode: str = "vllm",
     Returns:
         Configured agent with error handling wrapper
     """
-    import agents
     import logging
     
     logger = logging.getLogger(__name__)
@@ -165,7 +280,7 @@ def create_agent(model_name: str, port: int, mode: str = "vllm",
             env_var = "API_KEY_0" if is_player0 else "API_KEY_1"
             api_key = os.getenv(env_var, "your_api_key_here")
             
-        agent = agents.OpenRouterAgent(
+        agent = LLMAgent(
             model_name=model_name,
             api_base=api_base,
             api_key=api_key,
@@ -173,7 +288,7 @@ def create_agent(model_name: str, port: int, mode: str = "vllm",
         )
     else:
         # vLLM mode
-        agent = agents.OpenRouterAgent(
+        agent = LLMAgent(
             model_name=model_name,
             api_base=f"http://localhost:{port}/v1",
             api_key="your_api_key_here",

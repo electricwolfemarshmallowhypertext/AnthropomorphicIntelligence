@@ -38,9 +38,7 @@ pip install -r requirements.txt
 ### Verify Installation
 
 ```python
-from envs.registration import make
-from agents import OpenRouterAgent
-from wrappers import LLMObservationWrapper
+from textarena.envs.registration import make
 
 # Test environment creation
 env = make("TicTacToe-v0")
@@ -58,7 +56,7 @@ LearnArena supports two execution modes:
 
 ### Option 1: vLLM Mode (Local Models)
 
-#### 1. Start vLLM Servers
+#### 1. Start vLLM Servers (Optional)
 
 Before running experiments, start vLLM servers for the models:
 
@@ -70,7 +68,7 @@ vllm serve qwen2.5-32b-chat --port 8000 --gpu-memory-utilization 0.9
 vllm serve your-model-name --port 8001 --gpu-memory-utilization 0.9
 ```
 
-#### 2. Run the Main Benchmark
+#### 2. Run the Main Benchmark (This will host vllm server)
 
 ```bash
 # Make sure you're in the root directory

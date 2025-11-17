@@ -4,11 +4,10 @@ rich
 chess
 networkx
 python-dotenv
-opencv-python
 websockets
 vllm
 numpy
 pandas
 torch
 transformers
-textarena
+textarena==0.5.6
