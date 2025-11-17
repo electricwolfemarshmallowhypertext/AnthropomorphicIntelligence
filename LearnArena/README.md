@@ -469,23 +469,6 @@ results/experience_experiments/
 - **Progressive Learning**: Experience pool grows with each game
 
 
-## Key Differences Between Experiments
-
-Understanding which script to use for your research question:
-
-
-| Aspect                  | LearnArena Benchmark          | Learning from Concept       | Learning from Experience          |
-| ----------------------- | ----------------------------- | --------------------------- | --------------------------------- |
-| **Script**              | `learnarena_benchmark.py`     | `model_scale_experiment.py` | `experience_driven_experiment.py` |
-| **Learning Dimensions** | All three (LfI+LfC+LfE)       | LfC only                    | LfE only                          |
-| **Player-0 Role**       | Instructor/Evaluator          | Concept Provider            | Evaluator only                    |
-| **Player-1 Receives**   | Feedback + Concepts + History | Strategic guidance only     | Past game experiences only        |
-| **Best For**            | Complete evaluation           | Testing concept utilization | Testing experience-based learning |
-| **Comparison**          | Learning vs. No learning      | With concept vs. Without    | With experience vs. Baseline      |
-| **Output Type**         | JSONL (per round)             | JSON (aggregated)           | JSONL (per round)                 |
-| **Typical Runtime**     | Longest (all features)        | Medium                      | Medium                            |
-| **Model Requirements**  | 2 models + servers            | 2 models + servers          | 2 models + servers                |
-
 ## 🀽 Citation
 
 If you use LearnArena in your research, please cite:
