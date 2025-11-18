@@ -1,0 +1,13 @@
+requests
+openai
+rich
+chess
+networkx
+python-dotenv
+websockets
+vllm
+numpy
+pandas
+torch
+transformers
+textarena==0.5.6

@@ -1,0 +1,8 @@
+logs/
+*.pyc
+*egg-info/
+__pycache__/
+environment_summary/
+learnarena_results/
+.vscode/
+.history/

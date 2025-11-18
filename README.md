@@ -7,14 +7,19 @@
 
 ## Table of Contents
 
-* [Background](#background)
-* [Project Goals](#project-goals)
-* [Techniques & Sub-Projects](#techniques--sub-projects)
-  * [1. PCC: Embedding-based Context Compression](#1-pcc-embedding-based-context-compression)
-  * [2. MotiveBench: Benchmarking Human-like Motivation](#2-motivebench-benchmarking-human-like-motivation) 
-  * [3. SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](#3-socialcc-interactive-evaluation-for-cultural-competence-in-language-agents) 
-* [Contributing](#contributing) 
-* [Contact](#contact)
+- [Anthropomorphic Intelligence](#anthropomorphic-intelligence)
+  - [Table of Contents](#table-of-contents)
+  - [Background](#background)
+  - [Project Goals](#project-goals)
+  - [Techniques \& Sub-Projects](#techniques--sub-projects)
+    - [1. PCC: Embedding-based Context Compression](#1-pcc-embedding-based-context-compression)
+    - [2. MotiveBench: Benchmarking Human-like Motivation](#2-motivebench-benchmarking-human-like-motivation)
+    - [3. SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](#3-socialcc-interactive-evaluation-for-cultural-competence-in-language-agents)
+    - [4. LearnArena: Benchmarking Learning Ability](#4-learnarena-benchmarking-learning-ability)
+  - [Contributing](#contributing)
+  - [Trademarks](#trademarks)
+  - [Privacy](#privacy)
+  - [Contact](#contact)
 
 ---
 
@@ -67,15 +72,32 @@ This repository gathers and develops various techniques that contribute toward t
 
 ### 3. [SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](./SocialCC/README.md)
 
-**SocialCC**  is a novel benchmark designed to evaluate cultural competence through multi-turn interactive intercultural scenarios. It comprises 3,060 human-written scenarios spanning 60 countries across six continents. Through extensive experiments on eight prominent LLMs, our findings reveal a significant gap between the cultural knowledge stored in these models and their ability to apply it effectively in cross-cultural communication.
+
+
+**SocialCC** is a novel benchmark designed to evaluate cultural competence through multi-turn interactive intercultural scenarios. It comprises 3,060 human-written scenarios spanning 60 countries across six continents. Through extensive experiments on eight prominent LLMs, our findings reveal a significant gap between the cultural knowledge stored in these models and their ability to apply it effectively in cross-cultural communication.
 
 **Key Features:**
-* 3,060 diverse intercultural scenarios spanning 60 countries across six continents.
-* Three core evaluation dimensions: cultural awareness, cultural knowledge, and cultural behaviour.
-* Interactive multi-turn assessment that measures cultural competence in dynamic, context-rich social interactions.
-* Comprehensive cross-model analysis identifying misinterpretation of implicit cultural cues and inconsistent handling of value conflictss.
+
+- 3,060 diverse intercultural scenarios spanning 60 countries across six continents.
+- Three core evaluation dimensions: cultural awareness, cultural knowledge, and cultural behaviour.
+- Interactive multi-turn assessment that measures cultural competence in dynamic, context-rich social interactions.
+- Comprehensive cross-model analysis identifying misinterpretation of implicit cultural cues and inconsistent handling of value conflictss.
+
+------
+
+### 4. [LearnArena: Benchmarking Learning Ability](./LearnArena/README.md)
+
+**LearnArena** is a cognitively grounded benchmark for assessing how LLMs **learn**—not just solve static tasks—across three dimensions: **Learning from Instructor** (interactive feedback), **Learning from Concept** (rule summaries), and **Learning from Experience** (self-selected trajectory reuse). Built on a modified TextArena setup, it standardizes a two-player loop where the evaluated model plays 20 matches per environment, receives teacher feedback, conditions on concise rules, and leverages prior games as in-context examples.
+
+**Key Features:**
+
+- Three learning dimensions: instructor feedback (LfI), concept summaries (LfC), experience trajectories (LfE)
+- Unified protocol: 8 environments, 20 matches per model, fixed teacher opponent, win-rate metric
+- Cross-model benchmarking and insights on scale limits, instructor quality, and few- vs. many-shot behavior
 
 ---
+
+
 
 ## Contributing
 
