@@ -156,21 +156,8 @@ Each experiment type has its own Python script and shell runner in the root dire
 - **Main Benchmark**: `learnarena_benchmark.py` + `run_learnarena_benchmark.sh` (vLLM) / `run_learnarena_api_example.sh` (API)
 - **Learning from Concept**: `model_scale_experiment.py` + `run_learning_from_concept.sh` (vLLM) / `run_concept_api_example.sh` (API)
 - **Learning from Experience**: `experience_driven_experiment.py` + `run_learning_from_experience.sh` (vLLM) / `run_experience_api_example.sh` (API)
+- **Learning from Instructor**: `learning_from_instructor_experiment.py` + `run_learning_from_instructor.sh` (vLLM) / `run_instructor_api_example.sh` (API)
 
-## 🔑 API Key Management
-
-For security, we recommend using environment variables for API keys:
-
-```bash
-# Add to your ~/.bashrc or ~/.zshrc
-export API_KEY_0="your-player0-api-key"
-export API_KEY_1="your-player1-api-key"
-
-# Or set temporarily for a session
-export API_KEY_0="sk-..." API_KEY_1="sk-..." && python learnarena_benchmark.py --mode api ...
-```
-
-The code automatically reads from `API_KEY_0` (Player-0) and `API_KEY_1` (Player-1) environment variables when `--mode api` is used without explicit `--player0-api-key` or `--player1-api-key` arguments.
 
 ## 🎮 Experiment Types and Scripts
 
@@ -467,6 +454,43 @@ results/experience_experiments/
 - **Without Experience**: First few rounds establish baseline
 - **With Experience**: Later rounds use top-3 past experiences for learning
 - **Progressive Learning**: Experience pool grows with each game
+
+---
+
+### 4. Learning from Instructor (LfI)
+
+Evaluates models’ ability to **follow instructions, improve task adherence, and refine outputs** using instructor-style feedback. This component isolates how well a model responds to directive guidance.
+
+#### Python Script: `learning_from_instructor_experiment.py`
+
+**Purpose:** Implements the instruction-following experiment by generating outputs from a student model and evaluating them with an instructor model.
+
+**Key Features:**
+
+* Two-stage pipeline: **generation → instructor evaluation**
+* Works in **vLLM mode** (local inference) or **API mode** (remote inference)
+* Parallel execution for large-scale batch processing
+* Automatic correctness/quality scoring by an instructor model
+* Flexible configuration of both generation and evaluation models
+* Produces per-dataset and aggregated performance reports
+
+**Data Preparation:**
+
+Before running experiments, download the required datasets from the [MAmmoTH math_eval repository](https://github.com/TIGER-AI-Lab/MAmmoTH/tree/main/math_eval) and place them in a local data/ directory:
+Place your input JSONL datasets inside a local directory, for example:
+
+```bash
+mkdir -p data/
+# Place dataset1.jsonl, dataset2.jsonl, dataset3.jsonl, ...
+```
+
+Each dataset is a JSONL file with fields like:
+
+```json
+{ "input": "...", "answer": "..." }
+```
+
+---
 
 
 ## 🀽 Citation

@@ -1,9 +1,11 @@
 # utils.py
+import json
 import os
 import time
 import requests
 from typing import Dict, Any, List, Optional
 import subprocess
+from openai import OpenAI
 
 STANDARD_GAME_PROMPT = "You are a competitive game player. Make sure you read the game instructions carefully, and always follow the required format."
 class LLMAgent():
@@ -27,16 +29,6 @@ class LLMAgent():
         self.kwargs = kwargs
         self.timeout = timeout
         self._current_request = None
-
-        try:
-            from openai import OpenAI
-            import threading
-        except ImportError:
-            raise ImportError(
-                "OpenAI package is required for LLMAgent. "
-                "Install it with: pip install openai"
-            )
-
         # Use provided API key or get from environment variable
         if api_key is None:
             api_key = os.getenv("OPEN_API_KEY")
@@ -123,6 +115,73 @@ class LLMAgent():
             raise ValueError(f"Observation must be a string. Received type: {type(observation)}")
         return self._retry_request(observation)
     
+
+def filter_and_fix_file(file_path):
+    """
+    Reads a JSONL file, removes invalid lines, and overwrites the original file with only valid lines.
+    """
+    valid_lines = []
+    
+    with open(file_path, 'r', encoding='utf-8') as infile:
+        for line in infile:
+            if line.strip():  # Check if the line is not empty
+                try:
+                    json.loads(line)  # Attempt to load the line as JSON
+                    valid_lines.append(line)  # Store valid lines
+                except json.JSONDecodeError:
+                    print(f"Invalid JSON line removed: {line.strip()}")  # Log invalid line
+    
+    # Overwrite the original file with valid lines
+    with open(file_path, 'w', encoding='utf-8') as outfile:
+        outfile.writelines(valid_lines)
+
+def chat_completion(api_base: str, model_name: str, messages: list, max_tokens: int = 256, temperature: float = 0.7, api_key: str = "xxx") -> str:
+    """Generic helper for chat completion supporting both vLLM and API modes."""
+    if '/v1' not in api_base:
+        api_base = api_base + '/v1'
+    
+    client = OpenAI(base_url=api_base, api_key=api_key)
+    completion = client.chat.completions.create(
+        model=model_name,
+        messages=messages,
+        max_tokens=max_tokens,
+        temperature=temperature
+    )
+    return completion.choices[0].message.content
+
+def read_jsonl(file_path):
+    filter_and_fix_file(file_path)
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.strip():
+                yield json.loads(line)
+
+def write_jsonl(file_path, data_list, append=False):
+    """
+    Writes a list of dictionaries to a JSONL file.
+    If append is True, appends the data to the file instead of overwriting it.
+    """
+    mode = 'a' if append else 'w'
+    
+    # check if file exists
+    if not os.path.exists(file_path):
+        # check the parent directory and create if it doesn't exist
+        parent_dir = os.path.dirname(file_path)
+        if not os.path.exists(parent_dir):
+            os.makedirs(parent_dir)
+        
+        # create the file if it doesn't exist
+        with open(file_path, 'w', encoding='utf-8') as f:
+            pass
+        
+        # update mode to write
+        mode = 'w'
+
+
+    with open(file_path, mode, encoding='utf-8') as f:
+        for item in data_list:
+            f.write(json.dumps(item, ensure_ascii=False) + '\n')
+
 
 def start_vllm_server(model_path: str, model_name: str, port: int, gpu: int = 1):
     """
