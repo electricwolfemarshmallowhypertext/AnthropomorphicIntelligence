@@ -71,7 +71,7 @@ UPLOAD_HF = True
 
 - 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct FineWeb Data (256 tokens per segment, 5B tokens)](https://huggingface.co/datasets/BroAlanTaps/GPT2-Large-Llama3-8B-fineweb-256-5Btokens)
 
-**Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The checkpoint ``PCC-Decoder-Llama3-8B-Instruct`` was trained by adding Special Token `<MEM>`, `</MEM>` and `<AE>` and freezing other parameters during warm-up stage. After that, we fixed special token's parameters in the next stage. 
+**Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The Special Token `<MEM>`, `</MEM>` and `<AE>` were added and initialized from scratch. During training, the entire decoder, including these special token weights, remained frozen.
 
 ### **Training**
 Run the script in PCC root folder:
@@ -90,7 +90,7 @@ bash script/train/pretrain-large.sh
 
 - 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct Squad SFT Data](https://huggingface.co/datasets/BroAlanTaps/Stage2-PCC-Lite-SFT-Squad)
 
-**Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The checkpoint ``PCC-Decoder-Llama3-8B-Instruct`` was trained by adding Special Token `<MEM>`, `</MEM>` and `<AE>` and freezing other parameters during warm-up stage. After that, we fixed special token's parameters in the next stage. 
+**Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The Special Token `<MEM>`, `</MEM>` and `<AE>` were added and initialized from scratch. During training, the entire decoder, including these special token weights, remained frozen.
 
 
 ### **Training**
