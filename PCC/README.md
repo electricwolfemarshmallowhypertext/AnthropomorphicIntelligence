@@ -69,6 +69,7 @@ UPLOAD_HF = True
 
 ### Pre-training Data
 
+- 🔥🔥🔥[Warmup: GPT2-Large + Llama3-8B-Instruct RedPajama Data (128 tokens per segment, 32M tokens)](https://huggingface.co/datasets/BroAlanTaps/Warmup-GPT2-Large-Llama3-8B-Redpajama)
 - 🔥🔥🔥[GPT2-Large + Llama3-8B-Instruct FineWeb Data (256 tokens per segment, 5B tokens)](https://huggingface.co/datasets/BroAlanTaps/GPT2-Large-Llama3-8B-fineweb-256-5Btokens)
 
 **Note:** We trained PCC-Large by LoRA(Low-Rank Adaptation). The base model of LoRA is ``PCC-Encoder-Llama3-8B-Instruct``, which was added memory tokens. The Special Token `<MEM>`, `</MEM>` and `<AE>` were added and initialized from scratch. During training, the entire decoder, including these special token weights, remained frozen.
