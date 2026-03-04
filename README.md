@@ -16,6 +16,7 @@
     - [2. MotiveBench: Benchmarking Human-like Motivation](#2-motivebench-benchmarking-human-like-motivation)
     - [3. SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](#3-socialcc-interactive-evaluation-for-cultural-competence-in-language-agents)
     - [4. LearnArena: Benchmarking Learning Ability](#4-learnarena-benchmarking-learning-ability)
+    - [5. HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](#5-humanllm-towards-personalized-understanding-and-simulation-of-human-nature)
   - [Contributing](#contributing)
   - [Trademarks](#trademarks)
   - [Privacy](#privacy)
@@ -97,6 +98,18 @@ This repository gathers and develops various techniques that contribute toward t
 
 ---
 
+### 5. [HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](./HumanLLM/README.md)
+
+**HumanLLM** is a human-centric foundation model designed to enable large language models to understand and simulate individual human behaviors, cognition, and preferences. Built upon the Cognitive Genome Dataset, which aggregates millions of real-world user records from platforms such as Reddit, Twitter, Blogger, and Amazon, HumanLLM learns the relationship between a person’s identity, their environment, and resulting actions. Through a diverse set of training tasks—covering persona understanding, social reasoning, and personalized generation—the model is trained to predict user actions and inner thoughts, mimic user writing styles and preferences, and generate authentic user profiles. Extensive evaluations across in-domain tasks and out-of-domain social intelligence benchmarks demonstrate that HumanLLM significantly improves models’ ability to model human behavior and generate realistic, personalized responses. 
+
+**Key Features:**
+
+* A large-scale Cognitive Genome Dataset constructed from real-world user records across multiple platforms, supported by a rigorous multi-stage pipeline including data filtering, data synthesis, and automated quality control.
+
+* A model-agnostic training paradigm that equips LLMs with enhanced social intelligence through diverse tasks.
+
+* Comprehensive evaluation and insights.
+---
 
 
 ## Contributing
