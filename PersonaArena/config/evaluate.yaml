@@ -1,0 +1,50 @@
+# name of LLM model, 'custom' for custom model
+judger_llm: gpt-4o-mini  # fallback when no panel specified
+narrator_llm: qwen3-32b
+character_llm: qwen3-32b
+title: xxx
+scene_id: 0
+# temperature for LLM
+temperature: 0
+# maximum number of tokens for LLM
+max_token: 1500
+# execution mode, serial or parallel
+max_retries: 1
+# verbose mode
+verbose: True
+
+judges:
+  - name: qwen3
+    model: q3-32-N
+    api_base: http://xxx/v1
+    api_key: empty
+  - name: deepseek
+    model: deepseek-v2
+    api_base: http://xxx/v1
+    api_key: empty
+  - name: mistral
+    model: mistral-small3.2
+    api_base: http://xxx/v1
+    api_key: empty
+
+# example:
+# - name: qwen3
+#   model: q3-32-N
+#   api_base: http://172.31.198.xxx:8001/v1
+#   api_key: empty
+
+target_character_id: 0     
+debate_enabled: true
+debate_var_threshold: 1  # variance threshold tau for arbitration
+debate_gap: 2             
+debate_topk: 8            
+
+debate_referee: "q3-32-N"  
+debate_referee_api_base: http://xxx/v1
+debate_referee_api_key: empty
+debate_referee_provider: "openai"
+# debate_referee_api_version: "xxx"
+
+
+max_rounds: 20
+max_scenes: 10

@@ -16,7 +16,8 @@
     - [2. MotiveBench: Benchmarking Human-like Motivation](#2-motivebench-benchmarking-human-like-motivation)
     - [3. SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](#3-socialcc-interactive-evaluation-for-cultural-competence-in-language-agents)
     - [4. LearnArena: Benchmarking Learning Ability](#4-learnarena-benchmarking-learning-ability)
-    - [5. HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](#5-humanllm-towards-personalized-understanding-and-simulation-of-human-nature)
+    - [5. PersonaArena: Role-Play Simulation and Evaluation](#5-personaarena-role-play-simulation-and-evaluation)
+    - [6. HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](#5-humanllm-towards-personalized-understanding-and-simulation-of-human-nature)
   - [Contributing](#contributing)
   - [Trademarks](#trademarks)
   - [Privacy](#privacy)
@@ -98,7 +99,19 @@ This repository gathers and develops various techniques that contribute toward t
 
 ---
 
-### 5. [HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](./HumanLLM/README.md)
+### 5. [PersonaArena: Role-Play Simulation and Evaluation](./PersonaArena/README.md)
+
+**PersonaArena** is a dynamic simulation framework for evaluating persona-level role-playing in LLMs. It builds persona-grounded social scenes, runs multi-turn interactions among a narrator, a protagonist model, and NPCs, and records full action–dialogue trajectories. A multi-agent debating judge then evaluates persona fidelity, coherence, and adaptability, producing detailed and aggregated metrics that support rigorous comparison and improvement.
+
+**Key Features:**
+
+- A persona-grounded social simulation framework that elicits behaviors via dynamic, multi-turn interactions
+- A multi-agent debating judge for holistic and unbiased evaluation of role-playing quality
+- Elicited data that can be used for targeted post-training to improve persona consistency and realism
+
+---
+
+### 6. [HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](./HumanLLM/README.md)
 
 **HumanLLM** is a human-centric foundation model designed to enable large language models to understand and simulate individual human behaviors, cognition, and preferences. Built upon the Cognitive Genome Dataset, which aggregates millions of real-world user records from platforms such as Reddit, Twitter, Blogger, and Amazon, HumanLLM learns the relationship between a person’s identity, their environment, and resulting actions. Through a diverse set of training tasks—covering persona understanding, social reasoning, and personalized generation—the model is trained to predict user actions and inner thoughts, mimic user writing styles and preferences, and generate authentic user profiles. Extensive evaluations across in-domain tasks and out-of-domain social intelligence benchmarks demonstrate that HumanLLM significantly improves models’ ability to model human behavior and generate realistic, personalized responses. 
 
@@ -109,7 +122,8 @@ This repository gathers and develops various techniques that contribute toward t
 * A model-agnostic multi-task training paradigm that enhances LLMs’ social intelligence through diverse tasks, including profile generation, scenario generation, social question answering, writing imitation, personalized commenting, and preference prediction.
 
 * HumanLLM achieves superior performance in predicting user actions and inner thoughts, more accurately mimics user writing styles and preferences, and generates more authentic user profiles compared to base models. Furthermore, it shows significant gains on out-of-domain social intelligence benchmarks such as MotiveBench and ToMBench, indicating enhanced generalization.
----
+
+
 
 
 ## Contributing
