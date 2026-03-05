@@ -16,6 +16,7 @@
     - [2. MotiveBench: Benchmarking Human-like Motivation](#2-motivebench-benchmarking-human-like-motivation)
     - [3. SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](#3-socialcc-interactive-evaluation-for-cultural-competence-in-language-agents)
     - [4. LearnArena: Benchmarking Learning Ability](#4-learnarena-benchmarking-learning-ability)
+    - [5. PersonaArena: Role-Play Simulation and Evaluation](#5-personaarena-role-play-simulation-and-evaluation)
   - [Contributing](#contributing)
   - [Trademarks](#trademarks)
   - [Privacy](#privacy)
@@ -94,6 +95,18 @@ This repository gathers and develops various techniques that contribute toward t
 - Three learning dimensions: instructor feedback (LfI), concept summaries (LfC), experience trajectories (LfE)
 - Unified protocol: 8 environments, 20 matches per model, fixed teacher opponent, win-rate metric
 - Cross-model benchmarking and insights on scale limits, instructor quality, and few- vs. many-shot behavior
+
+---
+
+### 5. [PersonaArena: Role-Play Simulation and Evaluation](./PersonaArena/README.md)
+
+**PersonaArena** is a dynamic simulation framework for evaluating persona-level role-playing in LLMs. It builds persona-grounded social scenes, runs multi-turn interactions among a narrator, a protagonist model, and NPCs, and records full action–dialogue trajectories. A multi-agent debating judge then evaluates persona fidelity, coherence, and adaptability, producing detailed and aggregated metrics that support rigorous comparison and improvement.
+
+**Key Features:**
+
+- A persona-grounded social simulation framework that elicits behaviors via dynamic, multi-turn interactions
+- A multi-agent debating judge for holistic and unbiased evaluation of role-playing quality
+- Elicited data that can be used for targeted post-training to improve persona consistency and realism
 
 ---
 
