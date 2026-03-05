@@ -1,0 +1,47 @@
+character_llm: phi4
+narrator_llm: q3-32-N
+npc_llm: q3-32-N
+
+# Fallback scene (used only if autogen fails)
+scene_path: generated_scenes/default.json
+scene_id: 0
+scene_language: en
+
+# Autogen scene from persona
+autogen_scene_from_persona: true
+persona_jsonl_path: persona_data/1000_persona.en.jsonl
+persona_index: 32
+
+record_dir: output/record
+save_record: true
+character_record_path: character.jsonl
+round_record_path: round.jsonl
+sim_record_path: simulation.txt
+
+max_rounds: 10
+checkpoint_round_interval: 1
+
+max_token: 8192
+temperature: 0.5
+max_retries: 5
+model_kwargs:
+  extra_body:
+    enable_thinking: false
+    chat_template_kwargs:
+      enable_thinking: false
+verbose: true
+
+character_provider: openai
+character_api_key: empty
+character_api_base: xxx
+
+narrator_provider: openai
+narrator_api_key: empty
+narrator_api_base: xxx
+
+npc_provider: openai
+npc_api_key: empty
+npc_api_base: xxx
+
+play_role: -1
+npc_human_control: false
