@@ -10,6 +10,7 @@ import re
 import json
 import time
 import emoji
+import csv
 from os.path import expanduser 
 from tqdm import tqdm 
 import hashlib 
@@ -205,7 +206,7 @@ def safe_save2file(filename, df):
     success = False
     for attempt in range(0, max_retries):
         try:  
-            df.to_csv(filename, index=False)  
+            df.to_csv(filename, index=False, quoting=csv.QUOTE_ALL)  
             success = True
             break  
         except Exception as e:

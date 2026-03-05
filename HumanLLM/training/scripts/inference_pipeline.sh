@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==========settings ==========
-BASE_DIR=~/AnthropomorphicIntelligence/Human_LLM
+BASE_DIR=~/AnthropomorphicIntelligence/HumanLLM
 CUDA_DEVICES=0,1,2,3
 API_KEY=token-abc123
 PORT=8001
@@ -22,7 +22,7 @@ MODEL_LIST=(
   xxxx/Qwen2.5-3B-Instruct_lr5e-6_seq8192_batch64_zero2_3epoch/merged_model
 )
 
-OUTPUT_DIR=~/AnthropomorphicIntelligence/Human_LLM/output/test_indomain
+OUTPUT_DIR=~/AnthropomorphicIntelligence/HumanLLM/output/test_indomain
 INFER_LOG=infer.log
 
 

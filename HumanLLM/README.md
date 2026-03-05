@@ -49,11 +49,42 @@ For large-scale generation, we recommend:
 
 Model training is implemented using [**LLaMA-Factory**](https://github.com/hiyouga/LLaMAFactory), an efficient framework for fine-tuning large language models.
 
+#### 1. Prepare Training Configuration
 Configuration files for different base models are provided in:
 ```bash
 training/configs
 ```
+These configuration files must be copied into the LLaMA-Factory directory:
+```bash
+LLaMA-Factory/examples/train_full/
+```
+The training process uses the DeepSpeed configuration provided by LLaMA-Factory, so no additional DeepSpeed configuration files are required.
 
+#### 2. Register the Dataset
+You also need to modify the dataset registry in:
+```bash
+LLaMA-Factory/data/dataset_info.json
+```
+Add the following entry:
+```json
+"3m_sft_dataset_train": {
+  "file_name": "{HOME_DIR}/sft_dataset/train_splits",
+  "formatting": "sharegpt",
+  "columns": {
+    "messages": "messages"
+  },
+  "tags": {
+    "role_tag": "role",
+    "content_tag": "content",
+    "user_tag": "user",
+    "assistant_tag": "assistant",
+    "system_tag": "system"
+  }
+}
+```
+Make sure {HOME_DIR}/sft_dataset/train_splits points to the directory containing the prepared SFT dataset.
+
+#### 3. Launch Training
 To launch training, you can follow the example script:
 ```bash
 training/scripts/train.sh
@@ -82,11 +113,13 @@ bash training/scripts/inference_pipeline.sh
 ### Citation
 
 ```
-@article{lei2026humanllm,
+@inproceedings{lei2026humanllm,
   title={HumanLLM: Towards Personalized Understanding and Simulation of Human Nature},
   author={Lei, Yuxuan and Wang, Tianfu and Lian, Jianxun and Hu, Zhengyu and Lian, Defu and Xie, Xing},
-  journal={arXiv preprint arXiv:2601.15793},
-  year={2026}
+  booktitle={Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.1 (KDD '26)},
+  year={2026},
+  doi={10.1145/3770854.3780294}
+  url={https://arxiv.org/abs/2601.15793}
 }
 ```
 

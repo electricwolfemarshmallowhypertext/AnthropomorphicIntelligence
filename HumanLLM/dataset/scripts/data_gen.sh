@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd ~/AnthropomorphicIntelligence/Human_LLM/dataset
+cd ~/AnthropomorphicIntelligence/HumanLLM/dataset
 
 
 # data filtering

@@ -9,6 +9,7 @@ HOME_DIR = os.path.expanduser("~/HumanLLM_data")
 
 ZIP_PATH = f"{HOME_DIR}/raw/blogs.zip"
 OUTPUT_CSV = f"{HOME_DIR}/blogger/blogtext_v1.csv"
+os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
 
 
 def parse_filename(filename):
@@ -30,7 +31,7 @@ def main():
 
         with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as fout:
 
-            writer = csv.writer(fout)
+            writer = csv.writer(fout, delimiter=",", quotechar='"', quoting=csv.QUOTE_ALL)
             writer.writerow(["id", "gender", "age", "topic", "sign", "date", "text"])
 
             total_posts = 0
@@ -45,20 +46,21 @@ def main():
                 posts = re.findall(r"<post>(.*?)</post>", content, re.DOTALL)
 
                 for date, post in zip(dates, posts):
+                    try:
+                        text = post.replace("\n", " ").strip()
+                        writer.writerow([
+                            user_id,
+                            gender,
+                            age,
+                            topic,
+                            sign,
+                            date,
+                            text
+                        ])
 
-                    text = post.replace("\n", " ").strip()
-
-                    writer.writerow([
-                        user_id,
-                        gender,
-                        age,
-                        topic,
-                        sign,
-                        date,
-                        text
-                    ])
-
-                    total_posts += 1
+                        total_posts += 1
+                    except:
+                        continue
 
     print("Total posts:", total_posts)
     print("CSV saved to:", OUTPUT_CSV)
@@ -79,6 +81,7 @@ def filter_dataset():
     print(len(df))
     
     ## remove rows that the text column length is less that 300 
+    df = df.dropna(subset=["id", "date", "text"])
     df = df[df["text"].apply(lambda x: len(x) > 300)]
     print(len(df))
     safe_save2file(outfile, df)

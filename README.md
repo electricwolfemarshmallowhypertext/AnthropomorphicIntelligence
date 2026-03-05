@@ -104,11 +104,11 @@ This repository gathers and develops various techniques that contribute toward t
 
 **Key Features:**
 
-* A large-scale Cognitive Genome Dataset constructed from real-world user records across multiple platforms, supported by a rigorous multi-stage pipeline including data filtering, data synthesis, and automated quality control.
+* A large-scale Cognitive Genome Dataset constructed from real-world user records across multiple platforms, supported by a rigorous multi-stage pipeline including data filtering, data synthesis, and automated quality control to produce high-quality behavior logs for training.
 
-* A model-agnostic training paradigm that equips LLMs with enhanced social intelligence through diverse tasks.
+* A model-agnostic multi-task training paradigm that enhances LLMs’ social intelligence through diverse tasks, including profile generation, scenario generation, social question answering, writing imitation, personalized commenting, and preference prediction.
 
-* Comprehensive evaluation and insights.
+* HumanLLM achieves superior performance in predicting user actions and inner thoughts, more accurately mimics user writing styles and preferences, and generates more authentic user profiles compared to base models. Furthermore, it shows significant gains on out-of-domain social intelligence benchmarks such as MotiveBench and ToMBench, indicating enhanced generalization.
 ---
 
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-cd ~/AnthropomorphicIntelligence/Human_LLM/dataset
+cd ~/AnthropomorphicIntelligence/HumanLLM/dataset
 
 raw_data_dir="$HOME/HumanLLM_data/raw"
 save_data_dir="$HOME/HumanLLM_data/amazon/raw_data"
