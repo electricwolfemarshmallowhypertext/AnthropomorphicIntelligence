@@ -1,29 +1,37 @@
-# name of LLM model, 'custom' for custom model
-judger_llm: gpt-4o-mini  # fallback when no panel specified
-narrator_llm: qwen3-32b
-character_llm: qwen3-32b
+# Use the model identifier exposed by your endpoint, e.g. local `qwen3-32b` or paid API model `gpt-4o`
+judger_llm: xxx  # Fallback judge model when no multi-judge panel is specified
+# Must match the narrator model name used during simulation
+narrator_llm: xxx
+# Must match the character model name used during simulation
+character_llm: xxx
+# Experiment/run title (must match simulation record folder naming)
 title: xxx
+# Evaluate only this scene id (set according to your records)
 scene_id: 0
-# temperature for LLM
+# ===== LLM generation settings =====
+# Sampling temperature for judge/referee calls
 temperature: 0
-# maximum number of tokens for LLM
+# Max tokens per model response
 max_token: 1500
-# execution mode, serial or parallel
+# Retry attempts on API failure
 max_retries: 1
-# verbose mode
+# Print verbose evaluation logs
 verbose: True
 
+# ===== Judge panel (optional multi-judge setup) =====
+# If `judges` is provided, each entry is one evaluator endpoint.
+# `name` is display label; `model`/`api_base`/`api_key` are request settings.
 judges:
   - name: qwen3
-    model: q3-32-N
+    model: xxx
     api_base: http://xxx/v1
     api_key: empty
   - name: deepseek
-    model: deepseek-v2
+    model: xxx
     api_base: http://xxx/v1
     api_key: empty
   - name: mistral
-    model: mistral-small3.2
+    model: xxx
     api_base: http://xxx/v1
     api_key: empty
 
@@ -33,18 +41,28 @@ judges:
 #   api_base: http://172.31.198.xxx:8001/v1
 #   api_key: empty
 
-target_character_id: 0     
+# ===== Target and debate/arbitration settings =====
+# Character index to evaluate in the record
+target_character_id: 0
+# Enable debate/arbitration when judge scores disagree
 debate_enabled: true
-debate_var_threshold: 1  # variance threshold tau for arbitration
-debate_gap: 2             
-debate_topk: 8            
+# Variance threshold (tau) to trigger arbitration
+debate_var_threshold: 1
+# Minimum score gap to trigger debate flow
+debate_gap: 2
+# Number of candidate items/issues to send into debate
+debate_topk: 8
 
-debate_referee: "q3-32-N"  
+# Referee model identifier for arbitration
+debate_referee: "xxx"
+# Referee endpoint settings
 debate_referee_api_base: http://xxx/v1
 debate_referee_api_key: empty
 debate_referee_provider: "openai"
 # debate_referee_api_version: "xxx"
 
-
-max_rounds: 20
-max_scenes: 10
+# ===== Evaluation scope limits =====
+# Max debate rounds per item
+max_rounds: 5
+# Max number of scenes to evaluate in one run
+max_scenes: 1

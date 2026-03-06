@@ -8,10 +8,10 @@ LOG_DIR="${LOG_DIR:-output/log}"
 INDICES=(19)
 # INDICES=(6 19 29 39 49 59 69 78 89 96)
 CONFIGS=(
-  config/play_qwen3_32b.yaml
-  # config/play_mistral_small3.2.yaml
-  # config/play_phi4.yaml
-  # config/play_llama3.1_8b.yaml
+  config/play.yaml
+  # config/play_1.yaml
+  # config/play_2.yaml
+  # config/play_3.yaml
 )
 
 mkdir -p output/log

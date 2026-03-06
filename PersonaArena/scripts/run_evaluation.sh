@@ -3,7 +3,8 @@ set -euo pipefail
 
 CONFIG_FILE="config/evaluate.yaml"
 # TITLE maps to the subfolder name under output/record/<TITLE>/...
-TITLE="autogen_scene_Kyle_Adams_q3-32-N"
+TITLE="autogen_scene_xx_xx"
+# eg:TITLE="autogen_scene_Kyle_Adams_q3-32-N"
 # Batch titles; if non-empty, these override TITLE.
 TITLES=(
   # "autogen_scene_Henry_Long_q3-32-N"
@@ -11,8 +12,8 @@ TITLES=(
 # Optional file with one title per line (non-empty lines only).
 TITLES_FILE=""
 # These must match the <narrator>_<character> prefix in the record filename.
-NARRATOR_LLM="q3-32-N"
-CHARACTER_LLM="q3-32-N"
+NARRATOR_LLM="narrator_name"
+CHARACTER_LLM="character_name"
 
 if [[ -z "$CONFIG_FILE" || -z "$NARRATOR_LLM" || -z "$CHARACTER_LLM" ]]; then
   echo "Missing evaluation inputs."
