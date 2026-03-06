@@ -1,82 +1,135 @@
 # PersonaArena
-PersonaArena is a "role-play + evaluation" pipeline: it first runs an interaction (simulation) under a given persona, then uses evaluator models to score the outcome and output readable table metrics.
+
+PersonaArena is a "role-playing + evaluation" workflow: it first runs interactions (simulation) under a given persona, then uses an evaluation model to score the results and outputs easy-to-understand tabular metrics.
 
 <p align="center">
-  <img src="asset/img/PersonaArena.png" alt="Character Arena Framework" width="100%">
+
+<img src="asset/img/PersonaArena.png" alt="PersonaArena Framework" width="100%">
+
 </p>
 
-## What this repo does
-- **Generate interaction records (simulation)**: a narrator builds a scene, the main character (the LLM under test) and NPCs interact based on their personas, and the system records full actions and dialogue.
-- **Automatic evaluation**: score the main character's performance in each scene on 8 dimensions, producing detailed CSVs and summary CSVs.
-- **Model comparison**: switch models and APIs in `config/play_*.yaml` to reproduce or compare results.
+## What This Repository Does
+
+- **Generate interaction records (simulation)**: The narrator constructs scenarios, the protagonist (LLM under test) and NPCs interact according to their respective personas, and the system records complete actions and dialogues.
+
+- **Automatic evaluation**: Scores the protagonist's performance in each scenario across 8 dimensions, generating detailed CSV files and summary CSV files.
+
+- **Model comparison**: Switch models and APIs in `config/play.yaml` to reproduce or compare results.
 
 ## Installation
+
 ```shell
+
 pip install -r requirements.txt
+
 ```
 
-## Quick start (single simulation)
-1. Pick a config file and fill in model + API info (example: `config/play_gpt4o.yaml`).
-   - `character_llm` / `narrator_llm` / `npc_llm`: model names or aliases.
-   - `*_api_key` / `*_api_base`: API credentials for each model.
-   - Supports any OpenAI-compatible endpoint (including self-hosted services).
+## Quick Start (Single Simulation)
+
+1. Fill in model and API information in the configuration file (for example: `config/play.yaml`).
+
+- `character_llm` / `narrator_llm` / `npc_llm`: model name or alias (including locally deployed model names).
+
+- `*_api_key` / `*_api_base`: API credentials for each model.
+
+- Detailed parameter descriptions are available in the comments of `config/play.yaml`.
+
+- Supports any OpenAI-compatible endpoint (including self-hosted services).
+
 2. Run a single simulation:
+
 ```shell
-python -u simulator.py --config_file config/play_gpt4o.yaml --log_file simulation_gpt4o.log
+
+python -u simulator.py --config_file config/play.yaml --log_file simulation.log
+
 ```
 3. Outputs:
-   - Interaction records: `output/record/<title>/...`
-   - Logs: `output/log/simulation/<title>/...`
-   - Auto-generated scenes (if autogen enabled): `output/scenes/` or `generated_scenes/`
 
-> "simulation" means: auto-generate a scene from a persona + run a full interaction (actions + dialogue) + record everything.
+- Interaction records: `output/record/<title>/...`
 
-## Batch simulation (multiple personas / models)
-Script: `scripts/run_persona_batch.sh`  
-**Note**: the script hard-codes persona indices and config lists (`INDICES`, `CONFIGS`). Edit the script before running.
+- Logs: `output/log/simulation/<title>/...`
+
+- Auto-generated scenarios (if auto-generation is enabled): `output/scenes/` or `generated_scenes/`
+
+> "Simulation" means: automatically generating scenarios based on persona + running complete interactions (actions + dialogue) + recording all content.
+
+## Batch Simulation (Multiple Personas/Models)
+
+Script: `scripts/run_persona_batch.sh`
+
+**Note**: This script hardcodes persona indices and configuration lists (`INDICES`, `CONFIGS`). Please edit the script and prepare related configuration files before running.
 
 ```shell
+
 chmod +x scripts/run_persona_batch.sh
+
 scripts/run_persona_batch.sh
+
 ```
 
 Common edits:
-- `PERSONA_FILE`: persona jsonl path (default: `persona_data/1000_persona.en.jsonl`)
-- `INDICES`: persona indices to run
-- `CONFIGS`: model config list to run
 
-If you need a proxy on first run (to fetch the HuggingFace embedding model):
+- `PERSONA_FILE`: persona jsonl path (default: `persona_data/1000_persona.en.jsonl`)
+
+- `INDICES`: persona indices to run
+
+- `CONFIGS`: list of model configurations to run
+
+If a proxy is needed on first run (to download HuggingFace embedding models):
+
 ```shell
+
 export http_proxy=xxx; export https_proxy=xxx
+
 ```
 
 ## Evaluation
-After simulations finish, run the evaluation script to output metrics.
 
-Script: `scripts/run_evaluation.sh`  
-**Note**: you must set `TITLE` / `NARRATOR_LLM` / `CHARACTER_LLM`, and they must match the record file names.
+After simulation is complete, run the evaluation script to output metrics.
+
+Script: `scripts/run_evaluation.sh`
+
+- Detailed parameter descriptions are available in the comments of `config/evaluation.yaml`.
+
+**Note**: `TITLE` / `NARRATOR_LLM` / `CHARACTER_LLM` must be set, and they must match the record filenames.
 
 ```shell
+
 chmod +x scripts/run_evaluation.sh
+
 scripts/run_evaluation.sh
+
 ```
 
 Outputs:
+
 - Details: `output/evaluation/detail/<title>/<character>_<narrator>_character_evaluation_detail.csv`
+
 - Summary: `output/evaluation/multi/<title>/<narrator>_<scene_id>_character_evaluation_avg.csv`
 
 Metrics (8 dimensions):
-1. Knowledge Accuracy
-2. Emotional Expression
-3. Personality Traits
-4. Behavioral Accuracy
-5. Immersion
-6. Adaptability
-7. Behavioral Coherence
-8. Interaction Richness
 
-### Result table (see the final CSV at `output/evaluation/multi/<title>/<narrator>_<scene_id>_character_evaluation_avg.csv`)
-```text
-| Title | Judger | Narrator | Model | SceneID | Round | Knowledge Accuracy | Emotional Expression | Personality Traits | Behavioral Accuracy | Immersion | Adaptability | Behavioral Coherence | Interaction Richness | Average | DebateCount |
-| ...   | ...    | ...      | ...   | ...     | ...   | ...                | ...                  | ...               | ...                | ...       | ...         | ...                 | ...                 | ...     | ...        |
+1. Knowledge accuracy
+
+2. Emotional expression
+
+3. Personality traits
+
+4. Behavioral accuracy
+
+5. Immersion
+
+6. Adaptability
+
+7. Behavioral consistency
+
+8. Interaction richness
+
+### Results Table (see the final CSV file) （`output/evaluation/multi/<title>/<narrator>_<scene_id>_character_evaluation_avg.csv`）
+
+```table
+| Title | Evaluator | Narrator | Model | Scene ID | Rounds | Knowledge Accuracy | Emotional Expression | Personality Traits | Behavioral Accuracy | Immersion | Adaptability | Behavioral Consistency | Interaction Richness | Average | Debate Count |
+
+| ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... | ... |
+
 ```
