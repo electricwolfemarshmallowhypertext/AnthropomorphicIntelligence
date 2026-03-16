@@ -96,4 +96,4 @@ When a player asks a question, use the real-time game visuals to provide clear, 
 ```
 
 ## Contact
-If you would like early access to the model weights and dataset, or if you have any questions or would like to discuss this work, please contact the authors at [yanweicai@zju.edu.cn](mailto:yanweicai@zju.edu.cn), [broalantaps123@gmail.com](mailto:broalantaps123@gmail.com), or [jianxun.lian@microsoft.com](mailto:jianxun.lian@microsoft.com)
+If you would like early access to the model weights and dataset, or if you have any questions or would like to discuss this work, please contact the authors at [yanweicai@zju.edu.cn](mailto:yanweicai@zju.edu.cn), [broalantaps123@gmail.com](mailto:broalantaps123@gmail.com), or [jianxun.lian@microsoft.com](mailto:jianxun.lian@microsoft.com).
