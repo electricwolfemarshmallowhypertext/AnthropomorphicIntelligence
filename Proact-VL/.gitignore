@@ -1,0 +1,13 @@
+__pycache__/
+
+.amltignore
+.vscode/
+.ipynb_checkpoints
+**/.ipynb_checkpoints/
+
+/results
+/wandb
+/swanlog/
+/trainer_output/
+/DATA/
+tmp/
