@@ -24,8 +24,8 @@ and interaction.
 
 ## TODO List
 - [ ] Release the model zoo (pretrained checkpoints).
-- [ ] Release the training dataset.
-- [ ] Release the test dataset.
+- [ ] Release the training dataset and training scripts.
+- [ ] Release the test dataset and evaluation scripts.
 
 
 ## Installation
