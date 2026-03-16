@@ -152,13 +152,14 @@ class ProAct_OmniModel(PreTrainedModel, GenerationMixin):
             logger.warning('No state_threhold attribute to set.')
 
     '''
-    训练时，forward 计算 main loss + active loss, main loss计算预测文本的精度，active loss计算预测active label的精度
-    可能存在一种情况，即active label全为0（即全为silent），此时不计算main loss
-    推理时，
+    During training, `forward` computes main loss + active loss.
+    Main loss measures text prediction accuracy, and active loss measures active-label prediction accuracy.
+    There may be cases where all active labels are 0 (all silent); in that case, main loss is not computed.
+    During inference,
     '''
     def forward(self, active_labels=None, output_active_logits=True, *args, **kwargs):
         if output_active_logits:
-            # 如果要输出active_logits,需要拿到hidden_states进行计算，将其设置为True
+            # To output active_logits, hidden_states are needed for computation, so set this to True
             kwargs['output_hidden_states'] = True
 
         output = self.llm(*args, **kwargs)
@@ -216,7 +217,7 @@ class ProAct_OmniModel(PreTrainedModel, GenerationMixin):
             video_second_per_grid=video_second_per_grid,
             **kwargs,
         )
-        # 原始的qwen 2.5 omni将position_ids置为None,这里注释掉
+        # Original Qwen 2.5 Omni sets position_ids to None; that behavior is commented out here
         # model_inputs["position_ids"] = None
         # inplace modification
         # model_kwargs["cache_position"][-1:] + num_new_tokens
@@ -234,32 +235,32 @@ class ProAct_OmniModel(PreTrainedModel, GenerationMixin):
 
     def save_pretrained(self, output_dir: str, **kwargs):
         """
-        简化版：
-        - 保存 ProActConfig 到 output_dir/config.json
-        - 如果 self.llm 是 PeftModel：只保存 LoRA adapter 到 output_dir/llm_adapter
-        - 否则：保存完整 llm 到 output_dir/llm
-        - processor 总是保存到 output_dir/processor
+        Simplified version:
+        - Save `ProActConfig` to output_dir/config.json
+        - If `self.llm` is a `PeftModel`, save only the LoRA adapter to output_dir/llm_adapter
+        - Otherwise, save the full LLM to output_dir/llm
+        - Always save the processor to output_dir/processor
         """
         output_dir = os.fspath(output_dir)
         os.makedirs(output_dir, exist_ok=True)
 
-        # 1) 保存 config（外壳结构信息）
+        # 1) Save config (outer wrapper structure)
         if hasattr(self, "config") and isinstance(self.config, PretrainedConfig):
             self.config.save_pretrained(output_dir)
 
-        # 2) 保存 llm
+        # 2) Save llm
         if isinstance(self.llm, PeftModel):
             adapter_dir = os.path.join(output_dir, "llm_adapter")
             os.makedirs(adapter_dir, exist_ok=True)
             logger.info(f"[ProAct] Saving LoRA adapter to {adapter_dir}")
-            self.llm.save_pretrained(adapter_dir)  # 这里会只存 adapter + adapter_config
+            self.llm.save_pretrained(adapter_dir)  # This stores only adapter + adapter_config
         else:
             llm_dir = os.path.join(output_dir, "llm")
             os.makedirs(llm_dir, exist_ok=True)
             logger.info(f"[ProAct] Saving full llm to {llm_dir}")
             self.llm.save_pretrained(llm_dir, max_shard_size="3600MB",)
 
-        # 3) 保存 processor
+        # 3) Save processor
         proc_dir = os.path.join(output_dir, "processor")
         os.makedirs(proc_dir, exist_ok=True)
         logger.info(f"[ProAct] Saving processor to {proc_dir}")
@@ -269,39 +270,39 @@ class ProAct_OmniModel(PreTrainedModel, GenerationMixin):
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path: str, *model_args, **kwargs):
         """
-        简化版 from_pretrained：
-        - 先用 ProActConfig.from_pretrained 恢复 config 和 model_name_or_path
-        - __init__ 按 config.model_name_or_path 重新加载 base llm（Qwen / WrapQwen）
-        - 如果有 llm_adapter/：用 PeftModel.from_pretrained 在 base llm 上套 LoRA
-        - 如果有 llm/：直接把 llm/ 当成完整模型目录重新加载
-        - processor 从 processor/ 目录恢复；否则 fallback 到 model_name_or_path
+        Simplified `from_pretrained`:
+        - First restore config and model_name_or_path with `ProActConfig.from_pretrained`
+        - `__init__` reloads the base llm (Qwen / WrapQwen) using `config.model_name_or_path`
+        - If `llm_adapter/` exists, wrap the base llm with LoRA via `PeftModel.from_pretrained`
+        - If `llm/` exists, reload it directly as a full model directory
+        - Restore processor from `processor/`; otherwise fall back to `model_name_or_path`
         """
         load_dir = os.fspath(pretrained_model_name_or_path)
-        # 0) 如果是远程 repo，则先下载到本地缓存
+        # 0) If this is a remote repo, download it to local cache first
         if not os.path.isdir(load_dir):
             from huggingface_hub import snapshot_download
             load_dir = snapshot_download(repo_id=str(pretrained_model_name_or_path))
 
-        # 1) 加载 config
+        # 1) Load config
         config: ProActConfig = kwargs.pop("config", None)
         if config is None:
             config = ProActConfig.from_pretrained(load_dir)
 
-        # 2) 先构造一个“空壳”模型（里面会按 config.model_name_or_path 初始化 self.llm）
+        # 2) First construct a "shell" model (it initializes self.llm from config.model_name_or_path)
         model = cls(config, *model_args, **kwargs)
 
-        # 3) 处理 llm 部分
+        # 3) Handle llm
         adapter_dir = os.path.join(load_dir, "llm_adapter")
         full_llm_dir = os.path.join(load_dir, "llm")
 
         if os.path.isdir(adapter_dir):
-            # 保存的是 LoRA adapter + adapter_config
+            # Saved content is LoRA adapter + adapter_config
             logger.info(f"[ProAct] Loading base llm from {config.model_name_or_path} and LoRA adapter from {adapter_dir}")
-            base_llm = model.llm  # __init__ 已经按 model_name_or_path 加载好
+            base_llm = model.llm  # __init__ already loaded this from model_name_or_path
             model.llm = PeftModel.from_pretrained(base_llm, adapter_dir)
-            model.llm = model.llm.merge_and_unload()  # 合并 LoRA 权重，释放内存
+            model.llm = model.llm.merge_and_unload()  # Merge LoRA weights and release memory
         elif os.path.isdir(full_llm_dir):
-            # 保存的是完整 llm（比如没用 LoRA）
+            # Saved content is a full llm (e.g. when LoRA is not used)
             logger.info(f"[ProAct] Loading full llm from {full_llm_dir}")
             base_cls = type(model.llm)
             model.llm = base_cls.from_pretrained(
@@ -316,7 +317,7 @@ class ProAct_OmniModel(PreTrainedModel, GenerationMixin):
                 f"keep llm as freshly initialized from {config.model_name_or_path}."
             )
 
-        # 4) 处理 processor
+        # 4) Handle processor
         proc_dir = os.path.join(load_dir, "processor")
         if os.path.isdir(proc_dir):
             logger.info(f"[ProAct] Loading processor from {proc_dir}")

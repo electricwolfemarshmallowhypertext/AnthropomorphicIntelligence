@@ -19,7 +19,7 @@ class Talker:
         self.assistant_num = assistant_num
         # more options is available at https://huggingface.co/hexgrad/Kokoro-82M/tree/main/voices
         self.voices = ['af_heart', 'af_alloy', 'af_aoede', 'af_jessica']
-        assert assistant_num <= len(self.voices), f'当前仅支持最多{len(self.voices)}个助手的TTS语音'
+        assert assistant_num <= len(self.voices), f'Currently supports at most {len(self.voices)} assistant TTS voices'
         
         # tts
         self.assistant_voices = {
@@ -68,7 +68,7 @@ class Talker:
         if  self.previous_text['speaker_id'] is None or self.previous_text['speaker_id'] == speaker_id:
             self.previous_text['speaker_id'] = speaker_id
             self.previous_text['text'] += f' {text}'
-            #  如果self.previous_text['text] 中包含完整句子，提取完整句子并进行tts
+            # If self.previous_text['text'] contains complete sentences, extract and run TTS on them
             if any(punct in self.previous_text['text'] for punct in ['.', '!', '?']):
                 sentences = []
                 temp_sentence = ''
@@ -77,7 +77,7 @@ class Talker:
                     if char in ['.', '!', '?']:
                         sentences.append(temp_sentence.strip())
                         temp_sentence = ''
-                # 保留不完整的句子
+                # Keep incomplete sentence fragments
                 self.previous_text['text'] = temp_sentence.strip()
                 audio_to_return = np.array([], dtype=np.float32)
                 for sentence in sentences:
@@ -86,18 +86,18 @@ class Talker:
                         audio_to_return = np.concatenate((audio_to_return, audio))
                 return audio_to_return
             elif len(self.previous_text['text'].strip().split(' ')) >= 10:
-                # 达到一定词数也进行tts
+                # Also trigger TTS when word count reaches a threshold
                 audio_to_return = self.get_audio(self.previous_text['speaker_id'], self.previous_text['text'])
                 self.previous_text['speaker_id'] = None
                 self.previous_text['text'] = ''
                 return audio_to_return
 
         elif self.previous_text['speaker_id'] != speaker_id:
-            # 切换角色了，首先对之前的文本进行tts
+            # Speaker switched: first run TTS on previous text
             audio_to_return = np.array([], dtype=np.float32)
             if self.previous_text['text'].strip() != '':
                 audio_to_return = self.get_audio(self.previous_text['speaker_id'], self.previous_text['text'])
-            # 然后更新previous_text
+            # Then update previous_text
             self.previous_text['speaker_id'] = speaker_id
             self.previous_text['text'] = text
             return audio_to_return
@@ -162,9 +162,9 @@ class Talker:
 
 def enforce_exact_duration(wav: np.ndarray, sr: int) -> np.ndarray:
     """
-    将输入音频强制调整为 1 秒（24kHz），长度严格为 24000 采样点。
+    Force input audio to exactly 1 second (24kHz), i.e., 24000 samples.
     """
-    # 重采样到 24kHz
+    # Resample to 24kHz
     if sr != TARGET_SR:
         wav = librosa.resample(wav.astype(np.float32), orig_sr=sr, target_sr=TARGET_SR)
         sr = TARGET_SR
@@ -173,12 +173,12 @@ def enforce_exact_duration(wav: np.ndarray, sr: int) -> np.ndarray:
     if cur_len == TARGET_SAMPLES:
         return wav.astype(np.float32)
 
-    # 计算拉伸比率：rate>1 => 播放更快 => 音频变短
+    # Compute stretch ratio: rate>1 => faster playback => shorter audio
     rate = cur_len / float(TARGET_SAMPLES)
     if not np.isclose(rate, 1.0, atol=1e-3):
         wav = librosa.effects.time_stretch(wav.astype(np.float32), rate=rate)
 
-    # 精确裁剪/填充
+    # Exact trim/pad
     if len(wav) > TARGET_SAMPLES:
         wav = wav[:TARGET_SAMPLES]
     elif len(wav) < TARGET_SAMPLES:

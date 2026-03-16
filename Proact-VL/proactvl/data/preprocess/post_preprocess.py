@@ -5,7 +5,7 @@ import argparse
 from typing import List
 
 def random_select_samples(input_files: List[str], output_file: str, select_nums: List[int], seed: int = 42):
-    rng = random.Random(seed)  # ✅ 固定种子：每次结果一致（同一输入顺序/内容前提下）
+    rng = random.Random(seed)  # ✅ Fixed seed: deterministic results given the same input order/content
 
     selected_samples = []
     for input_file, select_num in zip(input_files, select_nums):

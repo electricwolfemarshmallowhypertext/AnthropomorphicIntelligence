@@ -1,4 +1,4 @@
-# 合并所有的ann
+# Merge all annotations
 import os
 import json
 

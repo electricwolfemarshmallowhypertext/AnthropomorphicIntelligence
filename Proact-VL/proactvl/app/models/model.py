@@ -4,7 +4,7 @@ import torch
 import torchvision.transforms as T
 from torchvision.transforms import functional as F
 
-import threading  # ✅ 新增：并发锁
+import threading  # ✅ Added: concurrent lock
 
 from proactvl.app.core.config import get_settings
 from proactvl.infer.multi_assistant_inference import MultiAssistantStreamInference, AssistantResponse
@@ -23,7 +23,7 @@ RESET = "\033[0m"
 
 class Model:
     def __init__(self) -> None:
-        # 设备/精度
+        # Device / precision
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.dtype = torch.float16
 
@@ -64,10 +64,10 @@ class Model:
             assistant.prime_system_prompt()
             assistant.set_threshold(self.threshold)
         # self.model.assistants[0].prime_system_prompt()
-        # # ✅ 确保门控阈值与本地一致
+        # # ✅ Ensure gating threshold matches the local setting
         # self.model.assistants[0].state_threshold = self.threshold
 
-        # 预处理（虽然 infer_one_chunk 里可能自带处理，这里保留你自定义）
+        # Preprocessing (infer_one_chunk may already handle this, but keep the custom path here)
         # self.tf = T.Compose([
         #     T.Resize(448, antialias=True),
         #     T.CenterCrop(448),
@@ -78,19 +78,19 @@ class Model:
 
         self.previous_info = None
 
-    # ===== 参数/缓存接口 =====
+    # ===== Parameter / cache interfaces =====
     def set_params(self, threshold: Optional[float] = None, assistant_id: Optional[int] = None) -> None:
-        """在“暂停评论”状态下由后端 WS 调用（已在 ws 层保证空闲时才允许）。"""
+        """Called by backend WS while commentary is paused (WS layer already guarantees idle state)."""
         with self._lock:
             if threshold is not None:
                 print(f"Setting threshold to {threshold}")
                 # thr = min(1.0, max(0.0, float(threshold)))
                 if assistant_id is None:
-                    # 对所有助手生效
+                    # Apply to all assistants
                     for assistant in self.model.assistants:
                         assistant.set_threshold(float(threshold))
                 else:
-                    # 只对指定助手生效
+                    # Apply only to the specified assistant
                     for assistant in self.model.assistants:
                         if assistant.assistant_id == assistant_id:
                             assistant.set_threshold(float(threshold))
@@ -100,12 +100,12 @@ class Model:
         print(f"Assistant ID: {assistant_id}")
         with self._lock:
             if assistant_id is None:
-                # 对所有助手生效
+                # Apply to all assistants
                 for assistant in self.model.assistants:
                     assistant.clear_session()
                     assistant.prime_system_prompt(prompt)
             else:
-                # 只对指定助手生效
+                # Apply only to the specified assistant
                 for assistant in self.model.assistants:
                     if assistant.assistant_id == assistant_id:
                         assistant.clear_session()
@@ -114,33 +114,33 @@ class Model:
     def set_assistant_count(self, count: int) -> None:
         # print(f"Setting assistant count to: {count}")
         with self._lock:
-            # 这里假设 model 有方法可以设置助手数量
+            # Assume the model exposes a method to set assistant count here
             self.model.set_assistant_count(count)
 
     def clear_cache(self, assistant_id: Optional[int] = None) -> None:
         with self._lock:
-            # 清理运行态（KV/历史上下文等）
+            # Clear runtime state (KV/history context, etc.)
             if assistant_id is None:
-                # 对所有助手生效
+                # Apply to all assistants
                 for assistant in self.model.assistants:
                     assistant.clear_session()
             else:
-                # 只对指定助手生效
+                # Apply only to the specified assistant
                 for assistant in self.model.assistants:
                     if assistant.assistant_id == assistant_id:
                         assistant.clear_session()
 
-    # ===== 图像预处理：0-255 float16，不归一化 =====
+    # ===== Image preprocessing: 0-255 float16, no normalization =====
     def _preprocess(self, frames: List[Image.Image]) -> torch.Tensor:
         tensors = []
         for img in frames:
             if img.mode != "RGB":
                 img = img.convert("RGB")
             if self.input_size is not None:
-                # 统一几何尺寸；只 resize（不裁剪）
+                # Normalize geometry; resize only (no crop)
                 img = F.resize(img, self.input_size, antialias=True)
             t = F.pil_to_tensor(img)             # uint8, [C,H,W], 0..255
-            t = t.to(dtype=torch.float16)        # float16, 0..255（不除以 255）
+            t = t.to(dtype=torch.float16)        # float16, 0..255 (do not divide by 255)
             tensors.append(t)
         x = torch.stack(tensors, dim=0).to(self.device, non_blocking=True)  # [B,C,H,W]
         return x
@@ -148,22 +148,22 @@ class Model:
     @torch.inference_mode()
     def infer(self, video: List[Image.Image], query: Optional[str]) -> str:
         """
-        video: 两帧 PIL.Image
-        query: 可选文本
-        return: 模型生成的 commentary
+        video: two PIL.Image frames
+        query: optional text
+        return: model-generated commentary
         """
         if _settings.USE_DUMMY:
             wh = f"{video[0].width}x{video[0].height}" if (video and video[0]) else "NA"
-            q = (query or "").strip() or "（无）"
-            # 展示当前参数，便于你观测 set_params 是否生效
-            return f"[demo] 接收2帧 分辨率{wh}；阈值={self.threshold:.2f}；SysPromptLen={len(self.system_prompt)}；Query：{q}"
+            q = (query or "").strip() or "(none)"
+            # Show current parameters to make it easy to observe whether set_params has taken effect
+            return f"[demo] Received 2 frames at resolution {wh}; threshold={self.threshold:.2f}; SysPromptLen={len(self.system_prompt)}; Query: {q}"
 
-        # 你的真实推理路径
+        # Actual inference path
         x = self._preprocess(video)  # [2,3,448,448]
         q = (query or "").strip()
         print(f"Model infer called with query: {q}")
-        # 注意：infer_one_chunk 的参数签名我保持你原样；根据你内部实现，videos 维度可能需要 [B,T,C,H,W]
-        # 你这里是 x.unsqueeze(0) -> [1,2,3,448,448]，若内部期望 [B,T,C,H,W] 则没问题。
+        # Note: infer_one_chunk parameter signature is kept unchanged; depending on your implementation,
+        # videos may need shape [B,T,C,H,W]. Here x.unsqueeze(0) -> [1,2,3,448,448], which is fine if that is expected.
         response, audio = self.model.infer_one_chunk_backend(
             audios=None,
             images=None,
@@ -192,7 +192,7 @@ class Model:
         # print(f'audio shape: {audio if audio is not None else "NA"}, speaker_id: {active_speaker_id}')
         return active_commentary, audio, active_speaker_id
 
-# 模型单例
+# Model singleton
 _model_singleton: Optional[Model] = None
 def get_model() -> Model:
     global _model_singleton
@@ -200,71 +200,71 @@ def get_model() -> Model:
         _model_singleton = Model()
     return _model_singleton
 
-# ====== 把 numpy 音频转成 WAV(Base64) ======
+# ====== Convert numpy audio to WAV (Base64) ======
 def numpy_to_wav_base64(
     audio: np.ndarray,
     sample_rate: int = 24000,
     num_channels: int = 1,
 ) -> str:
     """
-    将 numpy 音频数组编码成 WAV，再转 base64 字符串。
+    Encode a numpy audio array as WAV, then convert it to a base64 string.
 
-    支持：
-    - audio: shape (T,), (1, T), (T, 1) 等一维/二维
-    - dtype: float32/float64（-1~1）或 int16
+    Supports:
+    - audio: shape (T,), (1, T), (T, 1), and other 1D/2D layouts
+    - dtype: float32/float64 (in [-1,1]) or int16
     """
     if audio is None:
         raise ValueError("audio is None")
 
-    # 1) 先转成一维
+    # 1) First convert to a 1D layout when appropriate
     audio = np.asarray(audio)
     if audio.ndim == 2:
-        # 常见形式： (1, T) or (T, 1)
+        # Common layouts: (1, T) or (T, 1)
         if 1 in audio.shape:
             audio = audio.reshape(-1)
         else:
-            # 如果真的是多通道你可以自己扩展，这里先简单做“每列一个通道”
-            # 比如 (T, C)
+            # If this is truly multi-channel, you can extend it later; for now, treat each column as one channel
+            # e.g. (T, C)
             if audio.shape[1] == num_channels:
-                pass  # 下面会按多通道处理
+                pass  # Multi-channel handling is done below
             else:
-                # 暂时简单点：直接取第一列当单声道
+                # Keep it simple for now: use the first column as mono
                 audio = audio[:, 0]
     if audio.ndim == 1:
-        # 单通道
+        # Single-channel
         num_channels = 1
     else:
-        # 多通道 (T, C)
+        # Multi-channel (T, C)
         if audio.shape[1] != num_channels:
             num_channels = audio.shape[1]
 
-    # 2) 统一转成 int16 PCM
+    # 2) Convert uniformly to int16 PCM
     if np.issubdtype(audio.dtype, np.floating):
-        # 假设在 [-1, 1]，防一下溢出
+        # Assume values are in [-1, 1] and guard against overflow
         audio = np.clip(audio, -1.0, 1.0)
         audio_int16 = (audio * 32767.0).astype(np.int16)
     elif audio.dtype == np.int16:
         audio_int16 = audio
     else:
-        # 其他类型也强制转成 int16
+        # Force all other types to int16 as well
         audio_int16 = audio.astype(np.int16)
 
-    # 多通道情况：shape (T, C) -> 按行 interleave
+    # Multi-channel case: shape (T, C) -> row-wise interleave
     if audio_int16.ndim == 2:
-        # (T, C) 展成一维，wave 模块按小端序读
+        # Flatten (T, C) to 1D; the wave module reads it in little-endian order
         interleaved = audio_int16.reshape(-1)
     else:
         interleaved = audio_int16.reshape(-1)
 
-    # 3) 使用 wave + BytesIO 写成 WAV
+    # 3) Write as WAV using wave + BytesIO
     buf = io.BytesIO()
     with wave.open(buf, 'wb') as wf:
         wf.setnchannels(num_channels)
-        wf.setsampwidth(2)           # int16 = 2 字节
+        wf.setsampwidth(2)           # int16 = 2 bytes
         wf.setframerate(sample_rate)
         wf.writeframes(interleaved.tobytes())
 
     wav_bytes = buf.getvalue()
 
-    # 4) base64 编码成 str
+    # 4) Base64-encode to str
     return base64.b64encode(wav_bytes).decode("ascii")

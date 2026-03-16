@@ -6,7 +6,7 @@ class Frame(BaseModel):
     w: int
     h: int
     mime: Literal["image/jpeg"] = "image/jpeg"
-    data: str = Field(..., description="不带 data: 前缀的 base64")
+    data: str = Field(..., description="Base64 data without the data: prefix")
 
 class Hello(BaseModel):
     type: Literal["hello"]
@@ -21,36 +21,36 @@ class InferRequest(BaseModel):
     frames: List[Frame]
     query: Optional[str] = None
 
-# ===== 新增：控制消息 =====
+# ===== Added: control messages =====
 class SetParamsRequest(BaseModel):
     type: Literal["set_params"]
     request_id: int
     threshold: float = Field(..., ge=0.0, le=1.0)
-    assistant_id: Optional[int] = None  # 如果为 None，则对所有 assistant 生效
+    assistant_id: Optional[int] = None  # If None, applies to all assistants
 
 class ClearCacheRequest(BaseModel):
     type: Literal["clear_cache"]
     request_id: int
-    assistant_id: Optional[int] = None  # 如果为 None，则对所有 assistant 生效
+    assistant_id: Optional[int] = None  # If None, applies to all assistants
 
 class SetSystemPromptRequest(BaseModel):
     type: Literal["set_system_prompt"]
     request_id: int
     system_prompt: str = Field("", max_length=5000)
-    assistant_id: Optional[int] = None  # 如果为 None，则对所有 assistant 生效
+    assistant_id: Optional[int] = None  # If None, applies to all assistants
 
 class SetAssistantCountRequest(BaseModel):
     type: Literal["set_assistant_count"]
     request_id: int
     count: int = Field(..., ge=1, le=10)
-# ===== 响应 =====
+# ===== Responses =====
 class CommentResponse(BaseModel):
     type: Literal["comment"] = "comment"
     request_id: int
     text: str
     audio_mime: Optional[str] = None         # e.g. "audio/wav"
-    audio_base64: Optional[str] = None       # base64 后的 wav 字节
-    speaker: Optional[int] = None            # 推荐统一叫 speaker
+    audio_base64: Optional[str] = None       # Base64-encoded WAV bytes
+    speaker: Optional[int] = None            # Recommended unified name: speaker
 
 class ErrorResponse(BaseModel):
     type: Literal["error"] = "error"

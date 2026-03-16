@@ -115,7 +115,7 @@ def construct_conversation_prompt(ann, active_eos_token='', silence_eos_token=''
             "content": []
         })
     if 'history' in ann and ann['history'] is not None and ann['history'].strip() != '':
-        # 如果存在整体history，添加到第一个user的history中
+        # If a global history exists, add it to the first user's history
         cur_conversation[1]['content'].insert(0, {
             "type": "text",
             "text": ann['history']
@@ -123,7 +123,7 @@ def construct_conversation_prompt(ann, active_eos_token='', silence_eos_token=''
     for one_ann in reversed(ann['annotations']):
         if one_ann['end'] > video_end_time or one_ann['start'] < video_begin_time:
             continue
-        # 三种类型，一个是assistant，直接放到assistant中
+        # Three cases; first is assistant, which goes directly into the assistant turn
 
         if one_ann['role'] == 'assistant':
             if 'text' in one_ann and one_ann['text'] != '':
@@ -134,15 +134,16 @@ def construct_conversation_prompt(ann, active_eos_token='', silence_eos_token=''
                 })
             else:
                 raise ValueError(f"Assistant annotation must have 'text' or 'commentary' field: {one_ann}")
-        # 第二种类型是user
+        # Second case is user
         elif one_ann['role'] == 'user':
             if 'text' in one_ann and one_ann['text'] is not None and one_ann['text'].strip() != '' and one_ann['speaker'] != 'user':
-                # 注意，可能存在多个history，即一个历史history和前一秒的history，这里倒序遍历每次放在第一个
+                # Note: there may be multiple history entries, e.g. global history and previous-second history;
+                # iterate in reverse so each one is inserted at the front
                 begin_idx = one_ann['start'] - video_begin_time
                 to_append_text = f'[{one_ann["speaker"]}]: {one_ann["text"]}'
                 if to_append_text[-1] not in ['.', '!', '?']:
                     to_append_text += active_eos_token
-                # 如果存在history，则添加到text字段
+                # If history exists, append it to the text field
                 if cur_conversation[begin_idx*2 + 1]['content'][0]['type'] == 'text':
                     cur_conversation[begin_idx*2 + 1]['content'][0]['text'] = cur_conversation[begin_idx*2 + 1]['content'][0]['text'] + ' ' + to_append_text
                 else:
@@ -166,7 +167,7 @@ def construct_conversation_prompt(ann, active_eos_token='', silence_eos_token=''
     # cur_conversation = [conv for conv in cur_conversation if not (conv['role'] == 'assistant' and len(conv['content']) == 0)]
     for conv in cur_conversation:
         if conv['role'] == 'assistant':
-            # 如果没有内容，填充[SILENCE]
+            # If there is no content, fill with [SILENCE]
             if len(conv['content']) == 0:
                 conv['content'].append({
                     "type": "text",
@@ -175,12 +176,12 @@ def construct_conversation_prompt(ann, active_eos_token='', silence_eos_token=''
                 })
         elif conv['role'] == 'user':
             if conv['content'][0]['type'] != 'video':
-                # 添加'<|history_start|>', '<|history_end|>'
+                # Add '<|history_start|>' and '<|history_end|>'
                 conv['content'][0]['text'] = '<|history_start|>' + conv['content'][0]['text'] + '<|history_end|>'
             if conv['content'][-1]['type'] != 'video':
-                # 添加'<|query_start|>', '<|query_end|>'
+                # Add '<|query_start|>' and '<|query_end|>'
                 conv['content'][-1]['text'] = '<|query_start|>' + conv['content'][-1]['text'] + '<|query_end|>'
-    # 在每一个user后添加flag
+    # Add a flag after each user turn
     for i in range(len(cur_conversation)):
         if cur_conversation[i]['role'] == 'user':
             cur_conversation[i]['content'].append({
@@ -241,9 +242,9 @@ class CustomCommentaryDataset(Dataset):
         print(f'Load {len(self.ann_list)} samples.')
 
     
-    '''对于active labels来说，
-    <|im_start|>user\n<|vision_bos|><|VIDEO|><|vision_eos|><|im_end|>\n<|im_start|>assistant\n 为response
-    <|im_start|>user\n<|vision_bos|><|VIDEO|><|vision_eos|><|im_end|>\n<|im_start|>user\n<|vision_bos|><|VIDEO|><|vision_eos|><|im_end|>\n为silence
+    '''For active labels:
+    <|im_start|>user\n<|vision_bos|><|VIDEO|><|vision_eos|><|im_end|>\n<|im_start|>assistant\n indicates response
+    <|im_start|>user\n<|vision_bos|><|VIDEO|><|vision_eos|><|im_end|>\n<|im_start|>user\n<|vision_bos|><|VIDEO|><|vision_eos|><|im_end|>\n indicates silence
     '''
     def prepare_labels_for_multimodal(self,
                                     input_ids: torch.Tensor,) -> torch.Tensor:
@@ -263,17 +264,17 @@ class CustomCommentaryDataset(Dataset):
             else:
                 cur_role = self.processor.tokenizer.convert_ids_to_tokens(labels[0][im_start_idx + 1].item())
                 if cur_role == DEFAULT_SYSTEM_ROLE_TOKEN:
-                    # label处理
+                    # Label handling
                     # <|im_start|>system\nYou are a professional sports commentary Please given comment on the given video.<|im_end|>\n
                     labels[0][im_start_idx:im_end_idx + 2] = IGNORE_INDEX
-                    # active label处理
+                    # Active-label handling
                     labels_active[0][im_start_idx:im_end_idx + 2] = IGNORE_INDEX
                 elif cur_role == DEFAULT_USER_ROLE_TOKEN:
                     # <|im_start|>user\n<|vision_bos|><|VIDEO|><|vision_eos|><chunk_flag><|im_end|>\n
                     labels[0][im_start_idx:im_end_idx + 2] = IGNORE_INDEX
-                    # active label处理
+                    # Active-label handling
                     labels_active[0][im_start_idx:im_end_idx + 2] = IGNORE_INDEX
-                    labels_active[0][im_end_idx-1] = 0  # 初始化active label为0
+                    labels_active[0][im_end_idx-1] = 0  # Initialize active label to 0
                     # print(self.processor.tokenizer.decode(input_ids[0][im_start_idx:im_end_idx+2]))
                     # print(self.processor.tokenizer.convert_ids_to_tokens(input_ids[0][im_end_idx-1].item()))
                     assert self.processor.tokenizer.convert_ids_to_tokens(input_ids[0][im_end_idx-1].item()) == self.chunk_flag, \
@@ -291,7 +292,7 @@ class CustomCommentaryDataset(Dataset):
                         labels[0][im_start_idx:im_end_idx + 2] = IGNORE_INDEX
                     else:
                         labels_active[0][im_end_index[i-1].item()-1] = 1
-                    # 如果assistant中内容为空，将前一个user的active label设置为1
+                    # If assistant content is empty, set the previous user's active label to 1
                     # if im_end_idx != im_start_idx + 3:
                     #     labels_active[0][im_end_index[i-1].item()] = 1
                 else:
@@ -376,14 +377,14 @@ class CustomCommentaryDataset(Dataset):
             size=size,
         )
         if not self.use_audio_in_video:
-            # 如果不使用视频中的音频，则将input_features和feature_attention_mask设为None
+            # If video audio is not used, set input_features and feature_attention_mask to None
             inputs['input_features'] = None
             inputs['feature_attention_mask'] = None
         return inputs
 
     def prepare_inputs_for_qwen3_vl(self, conversation):
         text = self.processor.apply_chat_template(conversation, add_generation_prompt=False, tokenize=False)
-        # 仅传入第一个video chunk获取完整的video信息
+        # Pass only the first video chunk to obtain full video metadata
         first_user_conversation = conversation[1:2]
         images, videos, video_kwargs = process_vision_info_vl(first_user_conversation, image_patch_size=16, return_video_kwargs=True, return_video_metadata=True)
         
@@ -470,7 +471,7 @@ class DataCollatorForStream2Text(object):
         if samples[0].second_per_grid_ts is not None:
             second_per_grid_ts_list = [sample.second_per_grid_ts.squeeze(0) for sample in samples]
             _batch_second_per_grid_ts = torch.cat(second_per_grid_ts_list, dim=0)
-        # 如果包含input_features和feature_attention_mask，则进行pad和cat
+        # If input_features and feature_attention_mask are present, pad and concatenate them
         _batch_input_features = None
         _batch_feature_attention_mask = None
         if samples[0].input_features is not None and samples[0].feature_attention_mask is not None:
@@ -479,7 +480,7 @@ class DataCollatorForStream2Text(object):
             _batch_input_features = torch.cat(input_features_list, dim=0)
             _batch_feature_attention_mask = torch.cat(feature_attention_mask_list, dim=0)
 
-        # FIXME 加速数据读取，如果数据类型是float32，则转换为bfloat16
+        # FIXME Speed up data loading: convert float32 to bfloat16 when applicable
         if _batch_pixel_values_videos.dtype == torch.float32:
             _batch_pixel_values_videos = _batch_pixel_values_videos.to(torch.bfloat16)
         if _batch_input_features is not None and _batch_input_features.dtype == torch.float32:
@@ -524,13 +525,13 @@ if __name__ == '__main__':
     )
     token_num = 0
 
-    # 你机器 CPU 核心数自己调：比如 8/16/32
+    # Tune CPU core count for your machine, e.g. 8/16/32
     num_workers = min(32, os.cpu_count() or 4)
 
-    # 如果你在 Dataset 里返回的是一个对象/字典，默认 collate 可能会堆叠；
-    # 我们只需要原样拿出来，所以写一个 identity collate。
+    # If Dataset returns an object/dict, default collate may stack it.
+    # We only need to pass it through unchanged, so use an identity collate.
     def collate_fn(batch):
-        # batch 是长度=1 的 list（因为 batch_size=1）
+        # batch is a list of length 1 (because batch_size=1)
         return batch[0]
 
     loader = DataLoader(
@@ -538,20 +539,20 @@ if __name__ == '__main__':
         batch_size=1,
         shuffle=False,
         num_workers=num_workers,
-        pin_memory=False,            # 这里主要是CPU处理，没必要 pin
+        pin_memory=False,            # This path is mainly CPU-bound, so pinning is unnecessary
         persistent_workers=(num_workers > 0),
-        prefetch_factor=2,           # 可调大一点提高吞吐
+        prefetch_factor=2,           # Can be increased to improve throughput
         collate_fn=collate_fn,
     )
     token_num = 0
     for sample in tqdm(loader, total=len(train_dataset)):
-        # sample.input_ids: [1, seq] 或 [seq]，看你 Dataset 返回
+        # sample.input_ids: [1, seq] or [seq], depending on Dataset output
         input_ids = sample.input_ids
         if hasattr(input_ids, "shape"):
             # torch.Tensor
             tokens = input_ids.shape[-1]
         else:
-            # list 等
+            # list, etc.
             tokens = len(input_ids[-1]) if isinstance(input_ids, list) else len(input_ids)
 
         token_num += int(tokens)

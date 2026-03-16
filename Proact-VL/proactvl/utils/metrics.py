@@ -47,7 +47,7 @@ def compute_metrics(eval_pred: EvalPrediction):
     main_pred_ids, active_pred_ids = preds
     main_labels,   active_labels   = labels
 
-    # 转 numpy
+    # Convert to numpy
     to_np = lambda x: np.asarray(x) if x is not None else None
     main_pred_ids   = to_np(main_pred_ids)
     active_pred_ids = to_np(active_pred_ids)
@@ -56,10 +56,10 @@ def compute_metrics(eval_pred: EvalPrediction):
 
     metrics = {}
 
-    # ---------- 主任务 ----------
+    # ---------- Main task ----------
     if main_pred_ids is not None and main_labels is not None:
         mask = (main_labels != -100)
-        # shift logits (去掉最后一个预测) 和 labels (去掉第一个标签)
+        # Shift logits (drop last prediction) and labels (drop first label)
         shift_preds = main_pred_ids[:, :-1]
         shift_labels = main_labels[:, 1:]
 
@@ -69,7 +69,7 @@ def compute_metrics(eval_pred: EvalPrediction):
 
         metrics["main_acc"] = accuracy_score(y_true, y_pred) if y_true.size > 0 else 0.0
 
-    # ---------- Active 任务 ----------
+    # ---------- Active task ----------
     if active_pred_ids is not None and active_labels is not None:
         mask = (active_labels != -100)
         # print number of active labels and correct predictions
@@ -79,7 +79,7 @@ def compute_metrics(eval_pred: EvalPrediction):
         num_active = np.sum(active_labels == 1)
         num_all = np.sum(active_labels != -100)
         num_correct_pred = np.sum((active_pred_ids == 1) & (active_labels == 1))
-        # active pred_ids 需要乘上 mask
+        # active pred_ids should be masked
         num_active_pred = np.sum(active_pred_ids[mask] == 1)
         logger.info(f'There are {num_all} labels to be predicted, among which {num_active} are active. The model predicts {num_active_pred} active labels, correctly predicts {num_correct_pred} active labels.')
         y_true = active_labels[mask].ravel()
@@ -89,7 +89,7 @@ def compute_metrics(eval_pred: EvalPrediction):
             metrics["active_acc"] = accuracy_score(y_true, y_pred)
             metrics["active_f1_macro"] = f1_score(y_true, y_pred, average="macro", zero_division=0)
             
-            # 精确率 / 召回率 / F1，labels=[0,1]，顺序固定
+            # Precision / Recall / F1, with fixed order labels=[0,1]
             prec, rec, f1s, _ = precision_recall_fscore_support(
                 y_true, y_pred, labels=[0, 1], zero_division=0
             )
@@ -113,16 +113,16 @@ def compute_casual_metrics(eval_pred: EvalPrediction):
     main_pred_ids = preds
     main_labels   = labels
 
-    # 转 numpy
+    # Convert to numpy
     to_np = lambda x: np.asarray(x) if x is not None else None
     main_pred_ids   = to_np(main_pred_ids)
     main_labels     = to_np(main_labels)
     metrics = {}
 
-    # ---------- 主任务 ----------
+    # ---------- Main task ----------
     if main_pred_ids is not None and main_labels is not None:
         mask = (main_labels != -100)
-        # shift logits (去掉最后一个预测) 和 labels (去掉第一个标签)
+        # Shift logits (drop last prediction) and labels (drop first label)
         shift_preds = main_pred_ids[:, :-1]
         shift_labels = main_labels[:, 1:]
 
@@ -137,19 +137,19 @@ def compute_active_metrics(eval_pred: EvalPrediction):
     preds, labels = eval_pred
     active_pred_ids = preds
     active_labels   = labels
-    # 转 numpy
+    # Convert to numpy
     to_np = lambda x: np.asarray(x) if x is not None else None
     active_pred_ids = to_np(active_pred_ids)
     active_labels   = to_np(active_labels)
     metrics = {}
-    # ---------- Active 任务 ----------
+    # ---------- Active task ----------
     if active_pred_ids is not None and active_labels is not None:
         mask = (active_labels != -100)
 
         num_active = np.sum(active_labels == 1)
         num_all = np.sum(active_labels != -100)
         num_correct_pred = np.sum((active_pred_ids == 1) & (active_labels == 1))
-        # active pred_ids 需要乘上 mask
+        # active pred_ids should be masked
         num_active_pred = np.sum(active_pred_ids[mask] == 1)
         # logger.info(f'There are {num_all} labels to be predicted, among which {num_active} are active. The model predicts {num_active_pred} active labels, correctly predicts {num_correct_pred} active labels.')
         y_true = active_labels[mask].ravel()
@@ -160,7 +160,7 @@ def compute_active_metrics(eval_pred: EvalPrediction):
             metrics["active_acc"] = accuracy_score(y_true, y_pred)
             metrics["active_f1_macro"] = f1_score(y_true, y_pred, average="macro", zero_division=0)
             
-            # 精确率 / 召回率 / F1，labels=[0,1]，顺序固定
+            # Precision / Recall / F1, with fixed order labels=[0,1]
             prec, rec, f1s, _ = precision_recall_fscore_support(
                 y_true, y_pred, labels=[0, 1], zero_division=0
             )

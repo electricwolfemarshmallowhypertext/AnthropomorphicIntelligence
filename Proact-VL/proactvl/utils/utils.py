@@ -14,15 +14,16 @@ def _split_words(text: str) -> List[str]:
 
 def prune_cache_span(cache, start: int, end: int):
     """
-    在 DynamicCache 上“就地”删除 [start, end) 这段序列（所有层）。
-    仅做张量切片拼接 + seen_tokens 修正。调用方需自行确保与文本/位置对齐！
+    In-place remove sequence span [start, end) from DynamicCache (all layers).
+    Only performs tensor slice+concat and seen_tokens correction.
+    Caller must ensure alignment with text/positions.
     """
 
     num_layers = len(cache.layers)
     for i in range(num_layers):
         k = cache.layers[i].keys
         v = cache.layers[i].values
-        # 常见 layout 1: [B, H, T, D]
+        # Common layout 1: [B, H, T, D]
         # FIXME, hard coding, for qwen 2.5 omni, cache shape: [B, H, Seq_len, D]
 
         k_new = torch.cat([k[:, :, :start, :], k[:, :, end:, :]], dim=2)

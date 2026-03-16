@@ -130,7 +130,8 @@ def split_speakers_user_query(input_file, output_file):
                 f_out.write(json.dumps(new_ann, ensure_ascii=False) + '\n')
 
 def split_text_into_segments(text, n_segments):
-    # 将 text 按空格拆分成 n_segments 段，尽量均匀分配单词, 如果segments段数小于n_segments, 则只取实际段数,空格需要保留
+    # Split text by spaces into n_segments, distributing words as evenly as possible;
+    # if there are fewer segments than n_segments, use only the actual number of segments.
     words = text.split()
     # mask = []
     total_words = len(words)

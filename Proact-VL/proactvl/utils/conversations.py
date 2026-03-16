@@ -86,7 +86,7 @@ LIVECC_SYSTEM_PROMPT = 'You are a live video commentator. Generate real-time str
 EGO4D_SYSTEM_PROMPT = 'You are an AI assistant that provides real-time, step-by-step guidance from first-person (egocentric) video. Based on the user’s request, prior context, and the current visual scene, decide when and how to respond, and offer only the instruction that matches the user’s current progress as seen in the video. Advance to the next step only after the video shows the previous step is completed, grounding all guidance strictly in visible actions and object states, and avoid giving future steps prematurely or making unsupported assumptions.'
 
 def construct_val_system_prompt(dataset_name, tag, persona):
-    # 消除随机性
+    # Remove randomness
     if dataset_name in ['livecc']:
         return LIVECC_SYSTEM_PROMPT
     elif dataset_name in ['ego4d', 'Ego4D', 'ego4d_goal_step'] or tag in ['ego4d', 'Ego4D', 'ego4d_goal_step']:

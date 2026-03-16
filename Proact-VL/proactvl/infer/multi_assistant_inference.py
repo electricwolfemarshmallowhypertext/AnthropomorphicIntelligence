@@ -32,7 +32,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-# 日志管理，禁用读取数据时的日志信息
+# Logging setup: suppress noisy logs during data reading
 logging.getLogger("qwen_omni_utils.v2_5.vision_processor").setLevel(logging.ERROR)
 logging.getLogger("root").setLevel(logging.ERROR)
 logging.getLogger("transformers").setLevel(logging.ERROR)
@@ -42,7 +42,7 @@ PENALTY_FACTOR = 0
 ACCUMULATE_COUNTER = 100000
 import time
 
-# forward user时填充assistant id, assistant name, active score, begin_second等信息, forward assistant时生成response
+# During user forward, fill assistant id/name/active score/begin_second; during assistant forward, generate response
 @dataclass
 class AssistantResponse:
     assistant_id: int = None
@@ -80,7 +80,7 @@ class MultiAssistantStreamInference:
         self.generate_config['eos_token_id'] = self.tokenizer.eos_token_id
         self.generate_config['pad_token_id'] = self.tokenizer.pad_token_id
         
-        # assistants中存储kv cache等状态，避免初始化多个模型,默认assistant id从0开始编号
+        # Store KV cache and states in assistants to avoid initializing multiple models; assistant ids start from 0 by default
         self.assistants = [Assistant(i, self.model, self.max_kv_tokens, self.use_audio_in_video, self.generate_config, device=device) for i in range(self.assistant_num)]
         self.id2assistant = {assistant.assistant_id: assistant for assistant in self.assistants}
         # set threshold
@@ -109,7 +109,7 @@ class MultiAssistantStreamInference:
 
 
     def new_session(self, task: str = 'all'):
-        # 根据当前时间初始化session id
+        # Initialize session id from current time
         self.session_id = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.session_output_dir = os.path.join('./infer_output', f'session_{self.session_id}')
         for assistant in self.assistants:
@@ -138,13 +138,13 @@ class MultiAssistantStreamInference:
         if type(assistant_responses) is str:
             return assistant_responses
         
-        """构造除自身外的上一时刻发言上下文"""
+        """Build previous-turn context excluding the current assistant."""
         parts = []
         for rid, resp in assistant_responses.items():
             if rid == exclude_assistant_id:
                 continue
             print(f'{rid}, {resp}')
-            if resp.commentary and resp.commentary!='' and resp.commentary!=self.model.silence_eos_token and resp.active:  # 利用 __bool__，有效且有文本
+            if resp.commentary and resp.commentary!='' and resp.commentary!=self.model.silence_eos_token and resp.active:  # Effective and has valid text
                 parts.append(f"[SPEAKER_{rid}]: {resp.commentary}")
         return "".join(parts)
 
@@ -179,19 +179,19 @@ class MultiAssistantStreamInference:
         return text
 
     def _select_speaker(self, assistant_responses: Dict[int, AssistantResponse]) -> Optional[int]:
-        # 仅激活score最高的第一个assistant进行回复生成
+        # Only the active assistant with the highest score generates a response
         active_assistants = [resp for resp in assistant_responses.values() if resp.active]
         if not active_assistants:
             return None
-        # 按score排序，选择score最高的assistant
+        # Sort by score and choose the highest-scoring assistant
         active_assistants.sort(key=lambda x: x.score, reverse=True)
         selected_assistant = active_assistants[0]
         return selected_assistant.assistant_id
 
-     # 通过video reader读取video chunk
+    # Read video chunks through video reader
     def infer_one_chunk(self, begin_second, history=None, user_query=None, previous_responses=None):
         # only use the fisrt assistant for inference
-        # 0.初始化返回对象 
+        # 0. Initialize return object
         time1 = time.time()
         next_responses: Dict[int, AssistantResponse] = OrderedDict()
         mm_inputs = self.video_reader.get_inputs(begin_second)
@@ -223,7 +223,7 @@ class MultiAssistantStreamInference:
         token_cnt = 0
         speaker_id = self._select_speaker(next_responses)
         if speaker_id is None:
-            # 全silence
+            # All silence
             for a in self.assistants:
                 a.forward_custom_assistant(self.model.silence_eos_token)
                 next_responses[a.assistant_id].commentary = self.model.silence_eos_token
@@ -233,7 +233,7 @@ class MultiAssistantStreamInference:
                 if a.assistant_id != speaker_id:
                     a.forward_custom_assistant(self.model.silence_eos_token)
                     next_responses[a.assistant_id].commentary = self.model.silence_eos_token
-                    # 此刻模型可能判断为active，但由于一秒只有一个speaker发言，其他assistant强制置为inactive
+                    # Model may classify as active, but only one speaker is allowed per second; force others inactive
                     next_responses[a.assistant_id].active = False
                 else:
                     resp, token_cnt = speaker.forward_assistant()
@@ -252,9 +252,9 @@ class MultiAssistantStreamInference:
         return next_responses, extra_info
 
     
-     # inferface for web demo, get video frames directly, 同时返回audio
+    # Interface for web demo: consume frames directly and return audio as well
     def infer_one_chunk_backend(self, audios, images, videos, user_query, previous_assistant_responses, begin_second, history=None):
-        # 1.初始化返回对象 
+        # 1. Initialize return object
         next_responses: Dict[int, AssistantResponse] = OrderedDict()
         # 2. forward each assistant with the current chunk, update kv cache and detect active status
         for a in self.assistants:
@@ -280,10 +280,10 @@ class MultiAssistantStreamInference:
 
             next_responses[a.assistant_id].active = flag
             next_responses[a.assistant_id].score = score
-        # ================================= 仅允许同一秒一个人说话 =================================
+        # ================================= Only one speaker is allowed in the same second =================================
         speaker_id = self._select_speaker(next_responses)
         if speaker_id is None:
-            # 全silence
+            # All silence
             for a in self.assistants:
                 a.forward_custom_assistant('<|SILENCE|>')
                 next_responses[a.assistant_id].commentary = '<|SILENCE|>'
@@ -296,7 +296,7 @@ class MultiAssistantStreamInference:
             if a.assistant_id != speaker_id:
                 a.forward_custom_assistant('<|SILENCE|>')
                 next_responses[a.assistant_id].commentary = '<|SILENCE|>'
-                # 此刻模型可能判断为active，但由于一秒只有一个speaker发言，其他assistant强制置为inactive
+                # Model may classify as active, but only one speaker is allowed per second; force others inactive
                 next_responses[a.assistant_id].active = False
             else:
                 resp, _ = speaker.forward_assistant()
@@ -320,7 +320,7 @@ class MultiAssistantStreamInference:
         with open(os.path.join(self.session_output_dir, f'commentary_history.json'), 'w', encoding='utf-8') as f:
             json.dump(self.commentary_history, f, ensure_ascii=False, indent=4)
 
-        # 首先merge相邻assistant id的音频片段，如果后一秒没有评论内容，则end time可以延后
+        # First merge adjacent segments from the same assistant; if next second has no commentary, end time can be extended
         new_history = []
         pre = 0
         while pre < len(self.commentary_history):
@@ -343,7 +343,7 @@ class MultiAssistantStreamInference:
                     post += 1
                 else:
                     break
-            # 不论是遇到结束符break的还是间隔太长break的，再次遍历确保后面没有silence segment
+            # Whether broken by sentence end or by long interval, scan again to absorb trailing silence segments
             while post < len(self.commentary_history):
                 post_commentary = self.commentary_history[post]
                 if post_commentary['assistant_id'] is None:

@@ -50,7 +50,7 @@ Another interesting application is to initialize multiple assistants and let the
 
 Lauch the server, only support qwen2vl, qwen2.5vl, livecc-base model. Set the --port parameter to an unused port.
 ```
-python -m proactvl.app.cli --port 8001
+python -m proactvl.app.cli
 ```
 We recommend include the following content in the system prompts:
 <details>

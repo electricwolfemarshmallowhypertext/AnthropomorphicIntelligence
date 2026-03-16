@@ -42,9 +42,9 @@ class Assistant:
         self.token_cnts: Deque[int] = deque()
         self.dynamic_token_cnt = 0
         self.window_position_ids_for_stream = torch.empty((3, 1, 0), dtype=torch.long).to(device)
-        # 记录累计说话描述，超过一定长度后，开始找句号截断
+        # Track accumulated utterance text; once it grows long enough, start truncating at sentence boundaries
         self.accumulate_counter = 0
-        # 下一步是否应该停止
+        # Whether the next step should stop
         self.to_be_stopped = False
 
         self.session_id = None
@@ -58,7 +58,8 @@ class Assistant:
         # self.state_threshold = self.model.state_threshold
         self.state_threshold = 0.5
         
-    # 该函数有两个作用，一是设定系统提示，即确定模型的主任务，而是解决attention sink问题，因此需要特殊处理，理论上仅在session开始时调用一次
+    # This function has two purposes: set the system prompt (main task) and mitigate attention sink issues;
+    # it requires special handling and is ideally called once at session start.
     @torch.no_grad()
     def prime_system_prompt(self, system_prompt=None):
         if system_prompt is None:
@@ -98,7 +99,7 @@ class Assistant:
         print(f'[Assistant] setting state threshold of assistant {self.assistant_id} to: {threshold}')
         self.state_threshold = threshold
 
-    # 给定多模态输入，对输入进行缓存，若传入generate_config, 则返回是否flag，用于判断是否需要回复
+    # Cache multimodal input; if generate_flag is enabled, return the flag used to determine whether a response is needed
     @torch.no_grad()
     def forward_cache(self, inputs, generate_flag):
         position_ids = self.model.get_position_ids(max_position_id=self.max_position_id, **inputs)
@@ -129,7 +130,7 @@ class Assistant:
             return flag, score
         return None, None
 
-    # 给定多模态输入，对输入进行缓存，若传入generate_config, 则返回是否flag，用于判断是否需要回复
+    # Cache multimodal input; if generate_flag is enabled, return the flag used to determine whether a response is needed
     @torch.no_grad()
     def forward_cache_with_chunk(self, text, audios, images, videos, generate_flag):
         # print(f'{text}')
@@ -199,10 +200,11 @@ class Assistant:
             padding=True,
             use_audio_in_video=self.use_audio_in_video,
         ).to(self.model.device).to(self.model.llm.dtype)
-        # input_id长度只能为1
+        # input_ids length must be 1
         assert generate_inputs['input_ids'].shape[-1] == 1
 
-        # 在调用重写的prepare_inputs_for_generation方式时，首先会给position ids加1，因此这里直接使用max_position_id作为position id输入
+        # In overridden prepare_inputs_for_generation, position ids are incremented by 1 first,
+        # so use max_position_id directly as input position id here.
         position_ids = self.model.get_position_ids(max_position_id=self.max_position_id, **generate_inputs).add_(-1)
         # print(position_ids)
 
@@ -217,21 +219,21 @@ class Assistant:
             output_active_logits=False,
             **self.generate_config,
         )
-        # 计算新引入的字符，输入token长度为1，outputs最后一个token没有更新kv cache，因此不记录在内
+        # Compute newly introduced tokens; input token length is 1, and the last output token does not update KV cache, so exclude it
         new_tokens = outputs[:, :-1]
         new_token_cnt = new_tokens.shape[-1]
         response = self.model.processor.batch_decode(outputs[:, 1:-1], skip_special_tokens=False)[0]
         self.token_cnts.append(new_token_cnt)
         self.dynamic_token_cnt += new_token_cnt
 
-        # position ids在generate时进行了inplace修改
+        # Position ids are modified in-place during generation
         self.max_position_id = position_ids[0][0][-1].item()
         window_position_ids_cat = torch.arange(init_max_pos_id, self.max_position_id+1, device=position_ids.device).unsqueeze(0).unsqueeze(0).expand(3, 1, -1)
         self.window_position_ids_for_stream = torch.cat(
             [self.window_position_ids_for_stream, window_position_ids_cat], dim=-1
         )
         assert self.window_position_ids_for_stream.shape[-1] + self.system_token_cnt == self.kv.layers[0].keys.shape[2], \
-            f"kv长度不匹配，期望{self.window_position_ids_for_stream.shape[-1] + self.system_token_cnt}，实际{self.kv.layers[0].keys.shape[2]}"
+            f"KV length mismatch, expected {self.window_position_ids_for_stream.shape[-1] + self.system_token_cnt}, got {self.kv.layers[0].keys.shape[2]}"
         
         return response, new_token_cnt
 
@@ -255,7 +257,7 @@ class Assistant:
 
     @torch.no_grad()
     def forward_custom_assistant(self, text):
-        # 填充assistant prompt,不生成回复
+        # Prefill assistant prompt without generating a response
         prefill_text = f'<|im_start|>assistant\n{text}<|im_end|>\n'
         inputs = self.model.processor(
             text=prefill_text,
@@ -273,8 +275,8 @@ class Assistant:
         
     @torch.no_grad()
     def forward_assistant(self):
-        # 分为三步骤，首先，填充assistant prompt,然后生成回复，最后补上结尾的<|im_end|>\n
-        # ASSISTANT_PROMPT: ASSISTANT_PROMPT = '<|im_start|>assistant\n', <|im_start|>assistant用于填充cache，\n用于生成
+        # Three steps: prefill assistant prompt, generate response, then append trailing <|im_end|>\n
+        # ASSISTANT_PROMPT: ASSISTANT_PROMPT = '<|im_start|>assistant\n', <|im_start|>assistant is used to prefill cache, \n is used for generation
         prefill_text = '<|im_start|>assistant'
         inputs = self.model.processor(
             text=prefill_text,
@@ -300,7 +302,7 @@ class Assistant:
         ).to(self.model.device).to(self.model.llm.dtype)
         self.forward_cache(inputs, generate_flag=False)
 
-        # 将self.token_cnts的后三个合并成一个
+        # Merge the last three entries in self.token_cnts into one
         len1 = self.token_cnts.pop()
         len2 = self.token_cnts.pop()
         len3 = self.token_cnts.pop()
@@ -315,43 +317,43 @@ class Assistant:
             cur_pop_num = 0
             while cur_pop_num < int(self.max_kv_tokens*self.evict_percent) and len(self.token_cnts) > 0:
                 cur_pop_num += self.token_cnts.popleft()
-            logger.debug(f'当前kv长度{self.kv.layers[0].keys.shape[2]}，超出预算{self.dynamic_token_cnt + self.system_token_cnt - self.max_kv_tokens}，淘汰{cur_pop_num}个token')
+            logger.debug(f'Current KV length {self.kv.layers[0].keys.shape[2]} exceeds budget by {self.dynamic_token_cnt + self.system_token_cnt - self.max_kv_tokens}, evicting {cur_pop_num} tokens')
 
             window_position_ids_for_stream = self.window_position_ids_for_stream
             self.window_position_ids_for_stream = window_position_ids_for_stream[:, :, cur_pop_num:]
 
-            shift_size = self.window_position_ids_for_stream[0][0][0].item() - (self.system_token_cnt)  # 取第一个token的position id作为shift size
+            shift_size = self.window_position_ids_for_stream[0][0][0].item() - (self.system_token_cnt)  # Use first token position id as shift size
             self.window_position_ids_for_stream -= shift_size
             self.max_position_id = self.window_position_ids_for_stream[0][0][-1].item()
 
-            logger.debug(f'更新kv缓存，弹出{cur_pop_num}个token')
-            # 更新kv缓存
+            logger.debug(f'Updating KV cache, evicting {cur_pop_num} tokens')
+            # Update KV cache
             self.dynamic_token_cnt -= cur_pop_num
             if True:
                 self.kv = prune_cache_span(self.kv, self.system_token_cnt, self.system_token_cnt + cur_pop_num)
 
-                assert self.kv.layers[0].keys.shape[2] == self.dynamic_token_cnt + self.system_token_cnt, f"kv长度不匹配，期望{self.dynamic_token_cnt + self.system_token_cnt}，实际{self.kv.layers[0].keys.shape[-1]}"
-                assert self.dynamic_token_cnt == self.window_position_ids_for_stream.shape[-1], f'window position ids长度不匹配，期望{self.dynamic_token_cnt}，实际{self.window_position_ids_for_stream.shape[-1]}'
+                assert self.kv.layers[0].keys.shape[2] == self.dynamic_token_cnt + self.system_token_cnt, f"KV length mismatch, expected {self.dynamic_token_cnt + self.system_token_cnt}, got {self.kv.layers[0].keys.shape[-1]}"
+                assert self.dynamic_token_cnt == self.window_position_ids_for_stream.shape[-1], f'Window position ids length mismatch, expected {self.dynamic_token_cnt}, got {self.window_position_ids_for_stream.shape[-1]}'
                 for i in range(len(self.kv.layers)):
                     self.kv.layers[i].keys = self.model.shift_position_ids(-shift_size, self.kv.layers[i].keys, self.system_token_cnt)
 
                 assert self.kv.layers[0].keys.shape[2] == self.dynamic_token_cnt + self.system_token_cnt, \
-                    f"kv长度不匹配，期望{self.dynamic_token_cnt + self.system_token_cnt}，实际{self.kv.layers[0].keys.shape[2]}"
+                    f"KV length mismatch, expected {self.dynamic_token_cnt + self.system_token_cnt}, got {self.kv.layers[0].keys.shape[2]}"
             elif False:
-                # 清空缓存，重新填充
-                logger.debug(f'重新填充kv缓存')
+                # Clear cache and refill
+                logger.debug(f'Refilling KV cache')
                 self.max_position_id = -1
                 self.kv = None
                 self.system_token_cnt = 0
                 self.token_cnts: Deque[int] = deque()
                 self.dynamic_token_cnt = 0
                 self.window_position_ids_for_stream = torch.empty((3, 1, 0), dtype=torch.long).to(self.device)
-                # 重新填充系统提示
+                # Refill system prompt
                 self.prime_system_prompt()
             else:
                 self.max_position_id = self.system_token_cnt - 1
                 self.kv = prune_cache_span(self.kv, self.system_token_cnt, self.kv.layers[0].keys.shape[2])
-                print(f'kv缓存长度更新为{self.kv.layers[0].keys.shape}')
+                print(f'KV cache length updated to {self.kv.layers[0].keys.shape}')
                 self.token_cnts: Deque[int] = deque()
                 self.dynamic_token_cnt = 0
                 self.window_position_ids_for_stream = torch.empty((3, 1, 0), dtype=torch.long).to(self.device)
@@ -359,7 +361,7 @@ class Assistant:
     def monitor(self):
         # brief introduction
         logger.debug(f'Assistant ID: {self.assistant_id}, Name: {self.assistant_name}')
-        # window相关参数
+        # Window-related parameters
         logger.debug(f" Max Position ID: {self.max_position_id}, System Token Count: {self.system_token_cnt}, dynamic Token Count: {self.dynamic_token_cnt}, token counts queue: {list(self.token_cnts)}")
         logger.debug(f'Window Position IDs shape: {self.window_position_ids_for_stream.shape}')
         # state of kv cache
@@ -369,7 +371,7 @@ class Assistant:
 
         # brief introduction
         # print(f'Assistant ID: {self.assistant_id}, Name: {self.assistant_name}')
-        # # window相关参数
+        # # Window-related parameters
         # print(f" Max Position ID: {self.max_position_id}, System Token Count: {self.system_token_cnt}, dynamic Token Count: {self.dynamic_token_cnt}, token counts queue: {list(self.token_cnts)}")
         # print(f'Window Position IDs shape: {self.window_position_ids_for_stream.shape}')
         # # state of kv cache

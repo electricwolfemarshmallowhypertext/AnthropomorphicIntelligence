@@ -21,13 +21,13 @@ class VideoReader:
         self.process_video_end = video_begin
         self.process_vision_info(self.process_video_begin)
 
-    # 读取 [video_begin, min(video_begin + read_duration, self.video_end))
+    # Read [video_begin, min(video_begin + read_duration, self.video_end))
     def process_vision_info(self, video_begin):
         self.process_video_begin = video_begin
         self.process_video_end = min(video_begin + self.read_duration, self.video_end)
         print(f'Reading video {self.video_path} from {self.process_video_begin} to {self.process_video_end}')
 
-        # ✅ 每秒2帧
+        # ✅ 2 frames per second
         chunk_seconds = self.process_video_end - video_begin
         nframes = chunk_seconds * 2
 
@@ -69,7 +69,7 @@ class VideoReader:
             else:
                 video_metadatas = None
 
-            # ✅ 2帧一组切 chunk
+            # ✅ Split into chunks of 2 frames
             chunk_length = len(videos[0]) // 2
             videos = [videos[0][i:i+2] for i in range(0, len(videos[0]), 2)]
             video_metadatas = [{
@@ -108,14 +108,14 @@ class VideoReader:
             raise NotImplementedError
 
     def get_inputs(self, sec_idx):
-        # ✅ 如果超出当前chunk，滚动读取下一段
+        # ✅ If beyond current chunk, roll to the next segment
         if sec_idx >= self.process_video_end:
             self.process_vision_info(self.process_video_end)
 
-        # ✅ 当前秒在chunk内的 offset（等价第二份代码的 i）
+        # ✅ Offset of current second in chunk (equivalent to i in the second code version)
         i = sec_idx - self.process_video_begin
 
-        # ✅ 防止最后一段不足 read_duration 越界
+        # ✅ Prevent out-of-bounds when the last segment is shorter than read_duration
         if i < 0 or i >= len(self.videos):
             raise IndexError(f"sec_idx={sec_idx} out of current chunk range: "
                             f"[{self.process_video_begin}, {self.process_video_end}), "

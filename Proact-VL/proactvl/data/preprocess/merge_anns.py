@@ -81,12 +81,12 @@ def _normalize_en(text: str) -> str:
     s = re.sub(r"[\u200b-\u200f\uFEFF]", "", s)  # zero-width
     s = s.translate(_LEET_MAP)
 
-    # 常见连接符/点 -> 空格（便于识别 f-u-c-k / f.u.c.k）
+    # Common separators/dots -> spaces (helps recognize f-u-c-k / f.u.c.k)
     s = re.sub(r"[_\-\u2010-\u2015·•.]", " ", s)
     s = re.sub(r"\s+", " ", s).strip()
 
-    # 压缩“单字母拆分”的脏话写法：f u c k -> fuck
-    # 多跑几次以覆盖更长序列
+    # Compress profanity written as split single letters: f u c k -> fuck
+    # Run multiple times to cover longer sequences
     for _ in range(5):
         new_s = _SINGLE_LETTER_GAP.sub("", s)
         if new_s == s:
@@ -97,10 +97,10 @@ def _normalize_en(text: str) -> str:
 
 def _loose_seq_regex_no_space(seq: str, repeat_max: int = 3) -> str:
     """
-    允许插入符号，但不允许插入空格（防止跨词误判）。
+    Allow inserted symbols, but not spaces, to avoid false positives across words.
     """
     seq = re.sub(r"[^a-z0-9]", "", seq.lower())
-    between = r"[^a-z0-9\s]*"  # ✅ 不包含空格
+    between = r"[^a-z0-9\s]*"  # ✅ Does not include spaces
     parts = [rf"{re.escape(ch)}{{1,{repeat_max}}}" for ch in seq]
     return between.join(parts)
 
@@ -199,7 +199,7 @@ def merge_into_one_file_for_custom_annotations(dataset_name, ann_dir, video_dir,
                         # invalid text, skip this conversation
                         print(f"[Warning]: Invalid text {text} in file {file}, convert to string")
                         continue
-                    # 如果有脏话，则不添加到最终的annotation中
+                    # If profanity is detected, do not add it to the final annotations
                     if not is_clean_text(text):
                         print(f"[Warning]: Detected profanity in text: {text} in file {file}, skipping this annotation.")
                         continue

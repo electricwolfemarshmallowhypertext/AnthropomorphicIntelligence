@@ -21,13 +21,13 @@ async def ws_stream(ws: WebSocket):
     await ws.accept()
     logger.info("WS connected")
 
-    # 连接级别的“忙碌”标记：有推理在跑时，禁止修改参数
+    # Connection-level busy flag: when inference is running, parameter changes are forbidden
     infer_busy = False
 
     try:
         while True:
             raw = await ws.receive_text()
-            # 先解析 type
+            # Parse type first
             try:
                 data = json.loads(raw)
                 mtype = data.get("type")
@@ -40,12 +40,12 @@ async def ws_stream(ws: WebSocket):
                 try:
                     _ = Hello(**data)
                 except Exception:
-                    # 放宽：hello 校验失败也直接回
+                    # Relaxed behavior: still reply even if hello validation fails
                     pass
                 await ws.send_text(StatusResponse(text="hello received").model_dump_json())
                 continue
 
-            # ===== 推理 =====
+            # ===== Inference =====
             if mtype == "infer":
                 try:
                     req = InferRequest(**data)
@@ -53,7 +53,7 @@ async def ws_stream(ws: WebSocket):
                     await ws.send_text(ErrorResponse(text=f"bad infer payload: {e}").model_dump_json())
                     continue
 
-                # 解码两帧
+                # Decode two frames
                 pil_frames: List = []
                 try:
                     for f in req.frames[:2]:
@@ -78,7 +78,7 @@ async def ws_stream(ws: WebSocket):
 
                 continue
 
-            # ===== 控制：设置阈值 =====
+            # ===== Control: set threshold =====
             if mtype == "set_params":
                 rid = data.get("request_id")
                 if infer_busy:
@@ -98,7 +98,7 @@ async def ws_stream(ws: WebSocket):
                     await ws.send_text(ErrorResponse(request_id=rid, text=f"set_params error: {e}").model_dump_json())
                 continue
 
-            # ===== 控制：清空缓存 =====
+            # ===== Control: clear cache =====
             if mtype == "clear_cache":
                 rid = data.get("request_id")
                 if infer_busy:
@@ -118,7 +118,7 @@ async def ws_stream(ws: WebSocket):
                     await ws.send_text(ErrorResponse(request_id=rid, text=f"clear_cache error: {e}").model_dump_json())
                 continue
 
-            # ===== 控制：设置系统提示 =====
+            # ===== Control: set system prompt =====
             if mtype == "set_system_prompt":
                 rid = data.get("request_id")
                 print(data)
@@ -139,7 +139,7 @@ async def ws_stream(ws: WebSocket):
                     await ws.send_text(ErrorResponse(request_id=rid, text=f"set_system_prompt error: {e}").model_dump_json())
                 continue
 
-            # ===== ADDED: 控制：设置 Assistant 数量 =====
+            # ===== ADDED: Control: set assistant count =====
             if mtype == "set_assistant_count":
                 rid = data.get("request_id")
                 print(data)
@@ -147,13 +147,13 @@ async def ws_stream(ws: WebSocket):
                     await ws.send_text(ErrorResponse(request_id=rid, text="busy: inference in progress").model_dump_json())
                     continue
                 try:
-                    # 1. 验证请求
+                    # 1. Validate request
                     req = SetAssistantCountRequest(**data)
                 except Exception as e:
                     await ws.send_text(ErrorResponse(request_id=rid, text=f"bad set_assistant_count: {e}").model_dump_json())
                     continue
                 try:
-                    # 2. 获取模型并调用 (您需要在这里实现 'set_assistant_count' 逻辑)
+                    # 2. Get model and invoke method (implement 'set_assistant_count' logic here)
                     model = get_model()
                     await run_in_threadpool(model.set_assistant_count, req.count)
                     await ws.send_text(StatusResponse(request_id=rid, text="ok").model_dump_json())
@@ -167,7 +167,7 @@ async def ws_stream(ws: WebSocket):
                 
                 continue
             # ===== END ADDED =====
-            # 未知类型
+            # Unknown type
             await ws.send_text(ErrorResponse(text=f"unknown type: {mtype}").model_dump_json())
 
     except WebSocketDisconnect:

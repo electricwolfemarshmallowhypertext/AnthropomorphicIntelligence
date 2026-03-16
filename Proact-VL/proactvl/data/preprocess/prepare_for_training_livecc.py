@@ -9,13 +9,13 @@ import ffmpeg
 LIVE_VIDEO_DIR = "live_sft/videos"
 def process_one_file(ann_dir: str, ann_file: str, min_duration: int, max_duration: int):
     """
-    子进程函数：处理单个 .json 文件（JSONL 格式：一行一个 JSON）
-    返回：List[dict] 该文件产生的 annotations（可能为空）
+    Worker process function: handle a single .json file (JSONL format: one JSON per line).
+    Returns: List[dict] annotations produced from this file (possibly empty).
     """
     out = []
     file_path = os.path.join(ann_dir, ann_file)
 
-    # 只处理 .json
+    # Only process .json files
     if not ann_file.endswith(".json"):
         return out
 
@@ -26,7 +26,7 @@ def process_one_file(ann_dir: str, ann_file: str, min_duration: int, max_duratio
                 continue
             data = json.loads(line)
 
-            # 你原逻辑：从 data[0]['content'][0] 取视频信息
+            # Original logic: read video info from data[0]['content'][0]
             video_start = data[0]['content'][0]['video_start']
             video_end = data[0]['content'][0]['video_end']
             video_duration = math.floor(video_end - video_start)
@@ -48,7 +48,7 @@ def process_one_file(ann_dir: str, ann_file: str, min_duration: int, max_duratio
             category = data[0]['content'][1]['category']
             
             new_ann = {
-                'video_path': video_path,   # 你原来就是 ann_file
+                'video_path': video_path,   # Originally this corresponded to ann_file
                 'video_begin': 0,
                 'video_end': video_duration,
                 'video_duration': video_duration,
@@ -82,7 +82,7 @@ def process_one_file(ann_dir: str, ann_file: str, min_duration: int, max_duratio
                 start_time = ann[0] - video_start
                 end_time = ann[1] - video_start
 
-                # 你原逻辑：超出视频时长 or 超出 max_duration 则 break
+                # Original logic: break if beyond video duration or max_duration
                 if start_time >= video_duration or start_time >= max_duration or end_time > video_duration:
                     break
 
@@ -128,7 +128,7 @@ def main():
     parser.add_argument("--num_workers", type=int, default=max(1, (os.cpu_count() or 2) - 1),
                         help="Number of worker processes (default: cpu_count-1)")
 
-    # debug：只在主进程开启，避免子进程端口冲突
+    # Debug: only enable in the main process to avoid child-process port conflicts
     parser.add_argument("--debug", action="store_true", help="Enable debugpy in main process only")
     parser.add_argument("--debug_port", type=int, default=9501, help="debugpy port (main process)")
 
@@ -152,7 +152,7 @@ def main():
         print(f"No .json files found in {args.ann_dir}")
         return
 
-    # 多进程并发：按文件粒度
+    # Multiprocessing concurrency: one task per file
     with ProcessPoolExecutor(max_workers=args.num_workers) as ex:
         futures = [
             ex.submit(process_one_file, args.ann_dir, ann_file, args.min_duration, args.max_duration)
@@ -164,7 +164,7 @@ def main():
             if res:
                 annotations.extend(res)
 
-    # 写输出
+    # Write output
     os.makedirs(os.path.dirname(args.output_file) or ".", exist_ok=True)
     with open(args.output_file, "w") as out_f:
         for ann in annotations:
