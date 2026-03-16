@@ -18,6 +18,7 @@
     - [4. LearnArena: Benchmarking Learning Ability](#4-learnarena-benchmarking-learning-ability)
     - [5. PersonaArena: Role-Play Simulation and Evaluation](#5-personaarena-role-play-simulation-and-evaluation)
     - [6. HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](#5-humanllm-towards-personalized-understanding-and-simulation-of-human-nature)
+    - [7. Proact-VL: A Proactive VideoLLM for Real-Time AI Companions](#7-proact-vl-a-proactive-videollm-for-real-time-ai-companions)
   - [Contributing](#contributing)
   - [Trademarks](#trademarks)
   - [Privacy](#privacy)
@@ -123,8 +124,17 @@ This repository gathers and develops various techniques that contribute toward t
 
 * HumanLLM achieves superior performance in predicting user actions and inner thoughts, more accurately mimics user writing styles and preferences, and generates more authentic user profiles compared to base models. Furthermore, it shows significant gains on out-of-domain social intelligence benchmarks such as MotiveBench and ToMBench, indicating enhanced generalization.
 
+---
 
+### 7. [Proact-VL: A Proactive VideoLLM for Real-Time AI Companions](./Proact-VL/README.md)
+**Proact-VL** is a general framework that shapes multimodal language models into proactive, real-time interactive agents capable of human-like environment perception and interaction. It is built on multiple backbone models (Qwen2-VL, Qwen2.5-VL, Qwen3-VL) and supports solo commentary, co-commentary, and user guidance scenarios.
 
+**Key Features:**
+- **Real-Time Processing**: Handles infinite video streams with low latency
+- **Multi-Modal Commentary**: Supports single-speaker, multi-speaker, and guidance commentary scenarios
+- **Proactive Understanding**: Goes beyond reactive responses to provide contextual insights
+- **Flexible Architecture**: Built on multiple backbone models (Qwen2-VL, Qwen2.5-VL, Qwen3-VL)
+- **Comprehensive Evaluation**: Includes gaming scenario evaluation with LLM-based judging
 
 ## Contributing
 
