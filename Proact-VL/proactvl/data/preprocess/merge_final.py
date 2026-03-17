@@ -1,6 +1,7 @@
 # Merge all annotations
 import os
 import json
+import argparse
 
 TAG_MAP = {
     'cyberpunk_2077': 'Solo commentators',
@@ -22,8 +23,12 @@ TAG_MAP = {
 dataset_name_list = ['cyberpunk_2077', 'starcraft2', 'baldurs_gate_3',
                     'elden_ring', 'tears_of_the_kingdom', 'yu_gi_oh', 'lol', 'csgo',
                     'streetfighter6', 'minecraft']
-ann_dir = '/home/v-weicaiyan/ds/DATA/ann'
-save_file = '/home/v-weicaiyan/ds/DATA/ann/gaming_all_val.jsonl'
+parser = argparse.ArgumentParser()
+parser.add_argument('--ann_dir', type=str, default='/home/v-weicaiyan/ds/DATA/ann')
+args = parser.parse_args()
+
+ann_dir = args.ann_dir
+save_file = os.path.join(ann_dir, 'gaming_all_val.jsonl')
 anns = []
 for file in os.listdir(ann_dir):
     if file.endswith('_val.jsonl'):
@@ -47,8 +52,8 @@ with open(save_file, 'w') as f:
         f.write(json.dumps(ann) + '\n')
 
 # wukong
-ann_path = '/home/v-weicaiyan/ds/DATA/ann/black_myth_wukong_final_val.jsonl'
-save_file = '/home/v-weicaiyan/ds/DATA/ann/black_myth_wukong_val.jsonl'
+ann_path = os.path.join(ann_dir, 'black_myth_wukong_final_val.jsonl')
+save_file = os.path.join(ann_dir, 'black_myth_wukong_val.jsonl')
 dataset_name = 'black_myth_wukong'
 with open(ann_path, 'r') as f:
     anns = []
@@ -69,8 +74,8 @@ with open(save_file, 'w') as f:
         f.write(json.dumps(ann) + '\n')
 
 # ego4d
-ann_path = '/home/v-weicaiyan/ds/DATA/ann/ego4d_final_val.jsonl'
-save_file = '/home/v-weicaiyan/ds/DATA/ann/ego4d_val.jsonl'
+ann_path = os.path.join(ann_dir, 'ego4d_final_val.jsonl')
+save_file = os.path.join(ann_dir, 'ego4d_val.jsonl')
 dataset_name = 'ego4d'
 with open(ann_path, 'r') as f:
     anns = []
@@ -92,11 +97,11 @@ with open(save_file, 'w') as f:
 
 
 ann_path_list = [
-    '/home/v-weicaiyan/ds/DATA/ann/gaming_all_val.jsonl',
-    '/home/v-weicaiyan/ds/DATA/ann/black_myth_wukong_val.jsonl',
-    '/home/v-weicaiyan/ds/DATA/ann/ego4d_val.jsonl',
+    os.path.join(ann_dir, 'gaming_all_val.jsonl'),
+    os.path.join(ann_dir, 'black_myth_wukong_val.jsonl'),
+    os.path.join(ann_dir, 'ego4d_val.jsonl'),
 ]
-save_file = '/home/v-weicaiyan/ds/DATA/ann/all_in_one.jsonl'
+save_file = os.path.join(ann_dir, 'all_in_one.jsonl')
 all_anns = []
 for ann_path in ann_path_list:
     with open(ann_path, 'r') as f:
