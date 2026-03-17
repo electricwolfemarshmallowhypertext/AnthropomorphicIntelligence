@@ -63,10 +63,7 @@ def parse_args():
     model_group.add_argument(
         '--ckpt-path',
         type=str,
-        default=os.getenv(
-            'CKPT_PATH',
-            'oaaoaa/proactvl_base_liveccbase'
-        ),
+        required=True,
         help='Model checkpoint path'
     )
     model_group.add_argument(

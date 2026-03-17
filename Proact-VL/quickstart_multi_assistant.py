@@ -1,7 +1,14 @@
 from proactvl.infer.multi_assistant_inference import MultiAssistantStreamInference
 
 # config
-ckpt_path = 'oaaoaa/proactvl_base_liveccbase'
+
+"""
+Currently the model release is under compliance review
+and is restricted from public distribution.
+Please send an email to the authors for a private share
+of the model checkpoints.
+"""
+ckpt_path = ''
 model_config = None
 infer_config = {
     'max_kv_tokens': 16384,

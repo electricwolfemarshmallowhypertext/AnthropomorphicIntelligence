@@ -1,6 +1,12 @@
 from proactvl.infer.multi_assistant_inference import MultiAssistantStreamInference
 
 # config
+"""
+Currently the model release is under compliance review
+and is restricted from public distribution.
+Please send an email to the authors for a private share
+of the model checkpoints.
+"""
 ckpt_path = ''
 model_config = None
 infer_config = {

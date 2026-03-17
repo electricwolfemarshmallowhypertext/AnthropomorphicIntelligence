@@ -71,7 +71,7 @@ class ProAct_OmniModel(PreTrainedModel, GenerationMixin):
                 attn_implementation=config.attn_implementation,
                 low_cpu_mem_usage=config.low_cpu_mem_usage,
             )
-        elif self.model_name_or_path in ['chenjoya/LiveCC-7B-Instruct', 'Qwen/Qwen2-VL-7B-Instruct', 'chenjoya/LiveCC-7B-Base', 'oaaoaa/proactvl_base_liveccbase']:
+        elif self.model_name_or_path in ['chenjoya/LiveCC-7B-Instruct', 'Qwen/Qwen2-VL-7B-Instruct', 'chenjoya/LiveCC-7B-Base']:
             self.llm = WrapQwen2VL.from_pretrained(
                 self.model_name_or_path,
                 torch_dtype=config.torch_dtype,
