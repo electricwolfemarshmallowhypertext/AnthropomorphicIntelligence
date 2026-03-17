@@ -27,7 +27,7 @@ body{
   background:radial-gradient(1200px 600px at 20% -10%, var(--bg1), var(--bg2) 55%);
 }
 
-/* 顶部栏 */
+/* Top bar */
 .app-header{
   height:var(--header-h);
   display:flex; align-items:center; justify-content:space-between;
@@ -40,7 +40,7 @@ body{
   background:#eef2ff; color:#1e40af; border:1px solid #dbeafe;
 }
 
-/* 主布局：左 2fr | 右 1fr */
+/* Main layout: left 2fr | right 1fr */
 .main-container{
   height:calc(100vh - var(--header-h));
   padding:0 20px 20px;
@@ -49,7 +49,7 @@ body{
   gap:20px; min-height:0;
 }
 
-/* 面板 */
+/* Panels */
 .left-panel, .right-panel{
   background:var(--card);
   border:1px solid var(--line);
@@ -88,29 +88,29 @@ body{
   color:var(--muted);
 }
 
-/* 视频（主题） */
+/* Video (themed) */
 #video-container{
   position:relative;
   border:1px solid var(--line);
   border-radius:var(--radius);
   overflow:hidden;
   background:#000;
-  aspect-ratio:16/10;              /* 固定 16:10 比例 */
+  aspect-ratio:16/10;              /* Fixed 16:10 aspect ratio */
 }
 #preview{
   width:100%; height:100%;
-  object-fit:contain;               /* 不裁剪，必要时留黑边 */
+  object-fit:contain;               /* Do not crop; leave black bars when necessary */
   background:#000;
 }
 
-/* —— 模型设置：可折叠 —— */
+/* —— Model settings: collapsible —— */
 .settings-accordion{
   border-radius:12px;
   border:1px solid var(--line);
   background:var(--card);
   box-shadow:0 4px 16px rgba(17,24,39,.06);
-  overflow:auto;                    /* 整个折叠块滚动 */
-  max-height:38vh;                  /* 展开时的最大高度，可滚到底 */
+  overflow:auto;                    /* Scroll the entire accordion block */
+  max-height:38vh;                  /* Maximum expanded height; can scroll to the bottom */
 }
 @media (max-width:1100px){
   .settings-accordion{ max-height:30vh; }
@@ -122,7 +122,7 @@ body{
   cursor:pointer; user-select:none;
   background:linear-gradient(180deg,#ffffff,#f7f9fc);
   border-bottom:1px solid var(--line);
-  position:static;                  /* 非粘性，避免遮挡内容 */
+  position:static;                  /* Non-sticky to avoid covering content */
 }
 .settings-accordion > summary::-webkit-details-marker{ display:none; }
 .settings-accordion .summary-content{ display:flex; flex-direction:column; gap:2px; }
@@ -134,14 +134,14 @@ body{
 }
 .settings-accordion[open] .chevron{ transform:rotate(135deg); }
 
-/* 设置内容卡片 */
+/* Settings content card */
 .settings-panel{
   padding:12px 14px;
   background:var(--card);
 }
 .settings-panel fieldset[disabled]{ opacity:.6; pointer-events:none; filter:saturate(.85); }
 
-/* 表单行（紧凑） */
+/* Form rows (compact) */
 .form-row{
   display:flex; flex-direction:column; gap:8px;
   padding:10px 0;
@@ -159,7 +159,7 @@ body{
 .row.end{ justify-content:flex-end; }
 .muted{ color:var(--muted); }
 
-/* 控件（亮色） */
+/* Controls (light theme) */
 input[type="range"]{ width:200px; accent-color:var(--brand); }
 input[type="number"]{
   width:84px; padding:6px 8px; border-radius:8px;
@@ -170,7 +170,7 @@ textarea{
   border-radius:10px; border:1px solid var(--line-strong); background:#fff; color:var(--text);
 }
 
-/* 按钮 */
+/* Buttons */
 button{
   appearance:none; border:none; border-radius:12px; padding:10px 14px;
   background:linear-gradient(180deg,#ffffff,#f3f4f6);
@@ -189,12 +189,12 @@ button.primary{
 button.ghost{ background:#fff; border:1px solid var(--line-strong); }
 .btn-sm{ padding:6px 10px; border-radius:10px; font-size:12px; }
 
-/* 源选择、停止 */
+/* Source selection, stop */
 .source-selection, .controls{
   display:flex; gap:10px; flex-wrap:wrap;
 }
 
-/* 右侧：对话列充满高度，可滚到底 */
+/* Right side: conversation column fills height and can scroll to the bottom */
 .right-panel{
   display:flex; flex-direction:column; min-height:0;
 }
@@ -207,12 +207,12 @@ button.ghost{ background:#fff; border:1px solid var(--line-strong); }
   border-radius:var(--radius-sm);
   background:#ffffff;
   padding:12px;
-  overflow:auto;            /* 滚到底 */
-  flex:1;                   /* 占右列剩余高度 */
+  overflow:auto;            /* Scroll to the bottom */
+  flex:1;                   /* Occupy the remaining height of the right column */
   display:flex; flex-direction:column; gap:10px;
 }
 
-/* 消息泡泡（亮色） */
+/* Message bubbles (light theme) */
 .msg{ display:flex; flex-direction:column; gap:4px; }
 .msg .meta{ font-size:12px; color:var(--muted); }
 .msg .bubble{
@@ -222,7 +222,7 @@ button.ghost{ background:#fff; border:1px solid var(--line-strong); }
 .msg-user .bubble{ background:#eef2ff; border-color:#dbeafe; }
 .msg-model .bubble{ background:#ecfdf5; border-color:#d1fae5; }
 
-/* 输入行固定底部（亮色） */
+/* Input row fixed at the bottom (light theme) */
 .comment-input{
   display:flex; gap:10px; margin-top:10px;
 }
@@ -231,7 +231,7 @@ button.ghost{ background:#fff; border:1px solid var(--line-strong); }
   border:1px solid var(--line-strong); background:#ffffff; color:var(--text);
 }
 
-/* —— 滚动条美化（设置折叠块 & 评论框） —— */
+/* —— Scrollbar styling (settings accordion & commentary box) —— */
 .settings-accordion::-webkit-scrollbar,
 #commentary-box::-webkit-scrollbar{
   width:10px;
@@ -252,55 +252,55 @@ button.ghost{ background:#fff; border:1px solid var(--line-strong); }
 .settings-accordion{ scrollbar-width:thin; scrollbar-color:#93c5fd #f3f4f6; }
 #commentary-box{ scrollbar-width:thin; scrollbar-color:#93c5fd #f3f4f6; }
 
-/* 自适应：小屏改为上下布局 */
+/* Responsive: switch to vertical layout on small screens */
 @media (max-width:1100px){
   .main-container{ grid-template-columns:1fr; height:auto; }
   #video-container{ aspect-ratio:auto; }
 }
 
-/* 默认模型样式 */
+/* Default model style */
 .msg.msg-model .bubble {
-  /* 默认样式 */
+  /* Default style */
 }
 
-/* ======== 更新：支持整数 ID (0, 1, 2) 的样式 ======== */
-/* 生成的 class 为 speaker-0, speaker-1, speaker-2 */
+/* ======== Update: styles supporting integer IDs (0, 1, 2) ======== */
+/* Generated classes are speaker-0, speaker-1, speaker-2 */
 
-/* Assistant 1 (ID: 0) - 蓝色 */
+/* Assistant 1 (ID: 0) - Blue */
 .msg-model.speaker-0 .bubble,
-.msg-model.speaker-speaker_0 .bubble { /* 兼容旧版 */
+.msg-model.speaker-speaker_0 .bubble { /* Backward compatibility */
   border-left: 3px solid #4DCCE2;
 }
 
-/* Assistant 2 (ID: 1) - 橙色 */
+/* Assistant 2 (ID: 1) - Orange */
 .msg-model.speaker-1 .bubble,
-.msg-model.speaker-speaker_1 .bubble { /* 兼容旧版 */
+.msg-model.speaker-speaker_1 .bubble { /* Backward compatibility */
   border-left: 3px solid #EA8533;
 }
 
-/* Assistant 3 (ID: 2) - 绿色 */
+/* Assistant 3 (ID: 2) - Green */
 .msg-model.speaker-2 .bubble,
-.msg-model.speaker-speaker_2 .bubble { /* 兼容旧版 */
+.msg-model.speaker-speaker_2 .bubble { /* Backward compatibility */
   border-left: 3px solid #22c55e;
 }
 
-/* 其他可能的 ID */
-.msg-model.speaker-3 .bubble { border-left: 3px solid #A855F7; } /* 紫色 */
-.msg-model.speaker-4 .bubble { border-left: 3px solid #EC4899; } /* 粉色 */
-.msg-model.speaker-5 .bubble { border-left: 3px solid #EAB308; } /* 黄色 */
+/* Other possible IDs */
+.msg-model.speaker-3 .bubble { border-left: 3px solid #A855F7; } /* Purple */
+.msg-model.speaker-4 .bubble { border-left: 3px solid #EC4899; } /* Pink */
+.msg-model.speaker-5 .bubble { border-left: 3px solid #EAB308; } /* Yellow */
 
-/* ======== 新增：Assistant 设置样式 ======== */
+/* ======== New: Assistant settings styles ======== */
 
-/* 1. Assistant 数量选择 (单选按钮组) */
+/* 1. Assistant count selector (radio button group) */
 .radio-group {
   display: flex;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
-  overflow: hidden; /* 保证圆角切割 */
-  width: min-content; /* 宽度自适应 */
+  overflow: hidden; /* Preserve rounded corner clipping */
+  width: min-content; /* Auto-fit width */
 }
 .radio-group input[type="radio"] {
-  display: none; /* 隐藏原始的 radio 按钮 */
+  display: none; /* Hide the original radio button */
 }
 .radio-group label {
   padding: 6px 14px;
@@ -312,25 +312,25 @@ button.ghost{ background:#fff; border:1px solid var(--line-strong); }
   user-select: none;
   font-weight: 500;
   font-size: 13px;
-  min-width: 44px; /* 保证数字撑开 */
+  min-width: 44px; /* Ensure enough width for numbers */
   text-align: center;
 }
 .radio-group label:last-child {
   border-right: none;
 }
 .radio-group input[type="radio"]:checked + label {
-  background: var(--bg1); /* 激活时的背景色 (淡蓝) */
-  color: var(--brand); /* 激活时的文字颜色 (蓝色) */
+  background: var(--bg1); /* Background color when active (light blue) */
+  color: var(--brand); /* Text color when active (blue) */
   font-weight: 700;
   box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
 }
 .radio-group label:hover:not([:has(+ input:checked)]):not([:has(input:checked)]) {
-  background: #f9f9f9; /* 悬停效果 */
+  background: #f9f9f9; /* Hover effect */
 }
 
-/* ======== 新增：Assistant 设置样式 ======== */
+/* ======== New: Assistant settings styles ======== */
 
-/* 1. 下拉选择器样式 */
+/* 1. Dropdown selector style */
 select {
   padding: 6px 10px;
   border-radius: 10px;
@@ -341,38 +341,38 @@ select {
   cursor: pointer;
 }
 
-/* 2. Assistant 配置块容器 */
+/* 2. Assistant config block container */
 #assistantsConfigWrapper {
   margin-top: 12px;
   border-top: 1px solid var(--line);
 }
 
-/* 3. 单个 Assistant 设置块 (卡片中的卡片) */
+/* 3. Single Assistant settings block (card within a card) */
 .assistant-settings-block {
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   margin-top: 12px;
-  background: linear-gradient(180deg, #ffffff, #fcfdff); /* 极浅的背景区分 */
+  background: linear-gradient(180deg, #ffffff, #fcfdff); /* Very subtle background distinction */
   box-shadow: 0 2px 8px rgba(17,24,39,.04);
 }
 
-/* 4. Assistant 块标题 */
+/* 4. Assistant block title */
 .assistant-settings-block h4 {
   margin: 0 0 10px 0;
   font-size: 14px;
   font-weight: 700;
-  color: var(--brand); /* 标题使用主题色 */
+  color: var(--brand); /* Use the theme color for the title */
   border-bottom: 1px dashed var(--line);
   padding-bottom: 8px;
 }
 
-/* 5. 优化块内部的表单行间距 */
+/* 5. Improve spacing of form rows inside the block */
 .assistant-settings-block .form-row {
   padding-top: 8px;
   padding-bottom: 8px;
 }
 .assistant-settings-block .form-row:first-child {
-    padding-top: 0; /* 第一个表单行没有上边距 */
-    border-top: none; /* 第一个表单行没有上边框 */
+    padding-top: 0; /* The first form row has no top padding */
+    border-top: none; /* The first form row has no top border */
 }

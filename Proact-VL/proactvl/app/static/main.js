@@ -1,6 +1,6 @@
 // /static/main.js
 (() => {
-  // ================= 调试（可在 index.html 里设 window.DEBUG=true） =================
+  // ================= Debugging (set window.DEBUG=true in index.html) =================
   const DEBUG = !!window.DEBUG;
   const dlog  = (...a) => { if (DEBUG) console.log(...a); };
   const dwarn = (...a) => { if (DEBUG) console.warn(...a); };
@@ -10,7 +10,7 @@
 
   // ================= DOM =================
   const video = document.getElementById('preview');
-  const canvas = document.getElementById('canvas'); // 隐藏画布：仅用于抽帧
+  const canvas = document.getElementById('canvas'); // Hidden canvas: used only for frame capture
   const statusEl = document.getElementById('status');
   const commentaryBox = document.getElementById('commentary-box');
 
@@ -27,10 +27,10 @@
   // userCommentInput
   const queryInput = document.getElementById('queryInput');
 
-  // 模型设置区
+  // Model settings section
   const settingsStatus   = document.getElementById('settingsStatus');
 
-  // ========== Assistant 设置 DOM ==========
+  // ========== Assistant settings DOM ==========
   const assistantCountSelect = document.getElementById('assistantCountSelect');
   const applyCountBtn = document.getElementById('applyCountBtn');
   const assistantsConfigWrapper = document.getElementById('assistantsConfigWrapper');
@@ -46,40 +46,40 @@
     document.getElementById('settingsFieldset-3')
   ];
 
-  // ================= 配置 =================
-  const CAPTURE_INTERVAL_MS = 500;   // 抽帧：2 FPS
-  const INFER_INTERVAL_MS   = 1000;  // 推理：1 Hz
+  // ================= Configuration =================
+  const CAPTURE_INTERVAL_MS = 500;   // Frame capture: 2 FPS
+  const INFER_INTERVAL_MS   = 1000;  // Inference: 1 Hz
   const JPEG_QUALITY        = 0.6;
 
-  // WebSocket 地址
+  // WebSocket URL
   const BACKEND_WS_URL =
     window.WS_BASE ||
     ((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/stream');
 
-  // ================= 状态 =================
-  let mediaStream = null;        // 摄像头/屏幕流
-  let objectUrl   = null;        // 本地视频 URL
+  // ================= State =================
+  let mediaStream = null;        // Webcam/screen stream
+  let objectUrl   = null;        // Local video URL
   let sourceKind  = null;        // 'webcam' | 'screen' | 'file'
 
-  let captureTimer = null;       // 2FPS 抽帧计时器
-  let inferTimer   = null;       // 1Hz 发送推理请求计时器
-  let captureActive = false;     // 评论开关
+  let captureTimer = null;       // 2 FPS frame capture timer
+  let inferTimer   = null;       // 1 Hz inference request timer
+  let captureActive = false;     // Commentary toggle
 
-  // 最近两帧缓冲
+  // Buffer for the last two frames
   let lastFrames = [];
 
   // WebSocket
   let ws = null;
-  let reqSeq = 0;                // 请求自增 ID
-  const inflight = new Map();    // request_id -> { row, bubble }  （推理占位）
-  const inflightCtl = new Map(); // request_id -> { okMsg }        （控制消息）
+  let reqSeq = 0;                // Auto-incrementing request ID
+  const inflight = new Map();    // request_id -> { row, bubble }  (inference placeholder)
+  const inflightCtl = new Map(); // request_id -> { okMsg }        (control message)
 
-  // 可选 query
+  // Optional query
   let pendingQuery = null;
 
   const JPEG_MIME = 'image/jpeg';
 
-  // ================= 工具函数 =================
+  // ================= Utility functions =================
   const clamp01 = (v) => {
     const n = Number(v);
     if (Number.isNaN(n)) return 0;
@@ -116,13 +116,13 @@
     if (stopBtn)          stopBtn.disabled          = !ready;
   };
 
-  // 智能控制多个 Assistant Fieldset
+  // Smart control for multiple Assistant fieldsets
   const setSettingsEnabled = (enabled) => {
     assistantFieldsets.forEach((fieldset, index) => {
       const block = assistantBlocks[index];
       if (!fieldset || !block) return;
 
-      // 如果块是可见的，跟随全局状态；如果是隐藏的，强制禁用
+      // If the block is visible, follow the global state; if hidden, force disable it
       if (block.style.display !== 'none') {
         fieldset.disabled = !enabled;
       } else {
@@ -198,7 +198,7 @@
     }
   }
 
-  // ========== 全局语音播放 ==========
+  // ========== Global audio playback ==========
   const audioQueue = [];
   let globalAudio = null;
   let audioPlaying = false;
@@ -242,15 +242,15 @@
     if (commentaryBox) commentaryBox.innerHTML = '';
   }
 
-  // ========== 消息显示 ==========
+  // ========== Message rendering ==========
   function appendMessage(role, text, opts = {}) {
     const { speaker, audioUrl } = opts;
     const row = document.createElement('div');
     row.className = `msg msg-${role}`;
 
-    // 修复：使用严谨判断，避免 0 被当做 false
+    // Fix: use a strict check so 0 is not treated as false
     if (speaker !== undefined && speaker !== null) {
-      // 处理 speaker_0 -> speaker-speaker-0 样式兼容
+      // Handle style compatibility like speaker_0 -> speaker-speaker-0
       const cls = 'speaker-' + String(speaker).toLowerCase().replace(/[^a-z0-9]/g, '-');
       row.classList.add(cls);
     }
@@ -295,11 +295,12 @@
       meta.textContent = `${who} · ${nowCNTime()}`;
     }
     
-    // 修复：使用严谨判断，避免 0 被当做 false
+     // Fix: use a strict check so 0 is not treated as false
     if (speaker !== undefined && speaker !== null) {
        const cls = 'speaker-' + String(speaker).toLowerCase().replace(/[^a-z0-9]/g, '-');
-       // 防止重复添加，先清理旧的 speaker 类（简单起见，这里假设只会变一次或追加）
-       // 如果需要更严谨，可以先移除所有 speaker-* 类，但通常 updateMessage 是一次性的
+       // Prevent duplicate additions; clear old speaker classes first if needed
+       // For simplicity, this assumes it changes only once or is only appended
+       // For stricter handling, all speaker-* classes could be removed first, but updateMessage is usually one-time
        if (!row.classList.contains(cls)) {
          row.classList.add(cls);
        }
@@ -326,7 +327,7 @@
     return null;
   }
 
-  // ========== 采集 & 抽帧 ==========
+  // ========== Capture & frame extraction ==========
   const withStream = async (stream, kind) => {
     cleanupStream(); cleanupFile();
     mediaStream = stream; sourceKind  = kind;
@@ -399,7 +400,7 @@
     }, JPEG_MIME, JPEG_QUALITY);
   }
 
-  // ========== 逻辑更新：显示 Assistant 配置块并发送请求 ==========
+  // ========== Logic update: show Assistant config blocks and send request ==========
   function showAssistantConfig() {
     let selectedCount = 1;
     if (assistantCountSelect) {
@@ -408,7 +409,7 @@
     
     dlog('[Settings] Setting assistant count to:', selectedCount);
 
-    // 1. UI 更新
+    // 1. Update the UI
     if (assistantsConfigWrapper) assistantsConfigWrapper.style.display = 'block';
     assistantBlocks.forEach((block, index) => {
       const i = index + 1;
@@ -416,7 +417,7 @@
     });
     setSettingsEnabled(!captureActive);
 
-    // 2. 向后端发送请求：初始化 N 个 Assistant
+    // 2. Send a request to the backend: initialize N Assistants
     sendControl(
       'set_assistant_count', 
       { count: selectedCount }, 
@@ -470,7 +471,7 @@
     if (captureActive) { setSettingsHint('Commentary is running. Pause it before changing settings', false); return; }
     ensureWS();
     if (!ws || ws.readyState !== WebSocket.OPEN) { 
-      // 如果正在连接中，等连接上再发
+      // If it is still connecting, wait until the connection opens before sending
       if (ws && ws.readyState === WebSocket.CONNECTING) {
          const tempReqId = ++reqSeq;
          inflightCtl.set(tempReqId, { okMsg });
@@ -544,10 +545,10 @@
     queryInput.value = '';
   });
 
-  // ========== 逻辑更新：Assistant 控制绑定 (Loop 1..3) ==========
-  // 遍历 ID 后缀 1, 2, 3
+  // ========== Logic update: bind Assistant controls (Loop 1..3) ==========
+  // Iterate through ID suffixes 1, 2, 3
   [1, 2, 3].forEach((idSuffix) => {
-    // 后端 assistant_id 是 0-based (0, 1, 2)
+    // The backend assistant_id is 0-based (0, 1, 2)
     const assistantId = idSuffix - 1; 
 
     const rangeEl = document.getElementById(`thresholdRange-${idSuffix}`);
@@ -557,7 +558,7 @@
     const promptEl = document.getElementById(`systemPrompt-${idSuffix}`);
     const applyPromptBtn = document.getElementById(`applySystemPromptBtn-${idSuffix}`);
 
-    // 1. 阈值输入同步
+    // 1. Sync threshold inputs
     if (rangeEl && inputEl) {
       rangeEl.addEventListener('input', () => {
         const v = clamp01(rangeEl.value);
@@ -570,7 +571,7 @@
       });
     }
 
-    // 2. 应用阈值 -> 传 assistant_id
+    // 2. Apply threshold -> pass assistant_id
     if (applyThreshBtn) {
       applyThreshBtn.addEventListener('click', () => {
         const v = clamp01(inputEl?.value ?? rangeEl?.value ?? 0.5);
@@ -585,7 +586,7 @@
       });
     }
 
-    // 3. 清空缓存 -> 传 assistant_id
+    // 3. Clear cache -> pass assistant_id
     if (clearCacheBtn) {
       clearCacheBtn.addEventListener('click', () => {
         sendControl(
@@ -596,7 +597,7 @@
       });
     }
 
-    // 4. 应用系统提示 -> 传 assistant_id
+    // 4. Apply system prompt -> pass assistant_id
     if (applyPromptBtn) {
       applyPromptBtn.addEventListener('click', () => {
         const prompt = (promptEl?.value || '').trim();
@@ -609,7 +610,7 @@
     }
   });
 
-  // ========== 事件绑定 ==========
+  // ========== Event bindings ==========
   startWebcamBtn?.addEventListener('click', startWebcam);
   startScreenBtn?.addEventListener('click', startScreen);
   selectFileBtn?.addEventListener('click', () => fileInput?.click());
@@ -624,7 +625,7 @@
 
   applyCountBtn?.addEventListener('click', showAssistantConfig);
 
-  // ========== 初始化 ==========
+  // ========== Initialization ==========
   enableSources(true);
   enableReadyControls(false);
   setToggleUI();              

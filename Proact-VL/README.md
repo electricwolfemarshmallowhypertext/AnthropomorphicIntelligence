@@ -38,17 +38,17 @@ sh script/env/prepare_env.sh
 ## Quick Start
 1) Solo commentary, co-commentary, and user guidance scenarios
 
-We provide a quick inference script in `quickstart.ipynb` which support SOLO commentary, co-commentary and user guidance scenario.
+We provide a quick inference script in `quickstart.py` which support SOLO commentary, co-commentary and user guidance scenario.
 
 
 2) multi-assistant commentary
 
-Another interesting application is to initialize multiple assistants and let them converse with each other. We provide a simple code in `quickstart_multi_assistant.ipynb`.
+Another interesting application is to initialize multiple assistants and let them converse with each other. We provide a simple code in `quickstart_multi_assistant.py`.
 
 ## Demo
 ![Demo](asset/demo.png)
 
-Lauch the server, only support qwen2vl, qwen2.5vl, livecc-base model. Set the --port parameter to an unused port.
+Lauch the server, only support qwen2vl, qwen2.5vl, livecc-base model. Set the --port parameter to an unused port. For better presentation, we use [kokoro](https://github.com/hexgrad/kokoro) for audio generation.
 ```
 python -m proactvl.app.cli
 ```
