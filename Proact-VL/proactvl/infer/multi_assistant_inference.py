@@ -167,7 +167,7 @@ class MultiAssistantStreamInference:
         if user_query and user_query != '':
             messages[0]["content"].append({
                 "type": "text",
-                "text": f'<|query_bos|>{user_query}<|query_eos|>'
+                "text": f'<|query_start|>{user_query}<|query_end|>'
             })
         messages[0]["content"].append({
             "type": "text",

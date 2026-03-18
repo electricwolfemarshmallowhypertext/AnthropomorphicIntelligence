@@ -9,10 +9,7 @@ class Settings:
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     
     # Model configuration
-    CKPT_PATH: str = os.getenv(
-        "CKPT_PATH",
-        "/home/v-weicaiyan/ds/projects/weicaiyanWorkspace/code/AICompanion/ProActMLLM/trainer_output/proact_all_fulltuning_base_liveccbase_final/final"
-    )
+    CKPT_PATH: Optional[str] = os.getenv("CKPT_PATH")
     DEVICE_ID: int = int(os.getenv("DEVICE_ID", "0"))
     
     # Inference configuration
@@ -32,4 +29,10 @@ class Settings:
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()
+     settings = Settings()
+     if not settings.CKPT_PATH:
+         raise RuntimeError(
+             "CKPT_PATH environment variable is not set. "
+             "Please provide a valid checkpoint path via the CKPT_PATH environment variable."
+         )
+     return settings

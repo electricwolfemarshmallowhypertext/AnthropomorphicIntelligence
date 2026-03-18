@@ -257,7 +257,8 @@
 
     const meta = document.createElement('div');
     meta.className = 'meta';
-    const who = role === 'user' ? 'User' : (speaker || 'Model');
+    // const who = role === 'user' ? 'User' : (speaker || 'Model');
+    const who = role === 'user' ? 'User' : (speaker !== undefined && speaker !== null ? speaker : 'Model');
     meta.textContent = `${who} · ${nowCNTime()}`;
 
     const bubble = document.createElement('div');
@@ -381,7 +382,7 @@
 
   function captureFrame(){
     if (!video || !video.videoWidth) return;
-    const vw = video.videoWidth; vh = video.videoHeight;
+    const vw = video.videoWidth, vh = video.videoHeight;
     const targetW = Math.min(960, vw);
     const targetH = Math.round(vh * (targetW / vw));
     canvas.width = targetW; canvas.height = targetH;

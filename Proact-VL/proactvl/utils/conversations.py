@@ -16,7 +16,7 @@ BLACK_MYTH_WUKONG_PREFIX_PROMPT = "You are a live commentator for a Black Myth: 
 
 SOCCERNET_PREFIX_PROMPT = "You are a live commentator for a soccer match."
 
-# For game commentary, the system prompt is constructed with a prefix prompt specific to the game, the prompt for task, and commenatry style.
+# For game commentary, the system prompt is constructed with a prefix prompt specific to the game, the prompt for task, and commentary style.
 # For livecc and ego4d, use the dataset specific system prompts directly.
 PREFIX_PROMPT_MAP = {
     'cyberpunk_2077': CYBERPUNK_2077_PREFIX_PROMPT,

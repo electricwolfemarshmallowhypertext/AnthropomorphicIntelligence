@@ -29,7 +29,8 @@ class Model:
 
         # Concurrent lock and runtime parameters for set_params/set_system_prompt/clear_cache
         self._lock = threading.RLock()
-        self.threshold: float = _settings.THRESHOLD
+        # self.threshold: float = _settings.THRESHOLD
+        threshold = _settings.THRESHOLD
         self.system_prompt: str = ""  # Current system prompt for frontend/logging
 
         # ===== Load model initialization parameters from config =====
@@ -62,7 +63,7 @@ class Model:
         for assistant in self.model.assistants:
             assistant.clear_session()
             assistant.prime_system_prompt()
-            assistant.set_threshold(self.threshold)
+            assistant.set_threshold(threshold)
         # self.model.assistants[0].prime_system_prompt()
         # # ✅ Ensure gating threshold matches the local setting
         # self.model.assistants[0].state_threshold = self.threshold
@@ -156,7 +157,7 @@ class Model:
             wh = f"{video[0].width}x{video[0].height}" if (video and video[0]) else "NA"
             q = (query or "").strip() or "(none)"
             # Show current parameters to make it easy to observe whether set_params has taken effect
-            return f"[demo] Received 2 frames at resolution {wh}; threshold={self.threshold:.2f}; SysPromptLen={len(self.system_prompt)}; Query: {q}"
+            return f"[demo] Received 2 frames at resolution {wh}; threshold={self.model.assistants[0].threshold:.2f}; SysPromptLen={len(self.system_prompt)}; Query: {q}"
 
         # Actual inference path
         x = self._preprocess(video)  # [2,3,448,448]

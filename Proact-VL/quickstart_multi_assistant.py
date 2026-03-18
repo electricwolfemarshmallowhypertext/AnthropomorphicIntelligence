@@ -38,7 +38,7 @@ stream_infer.assistants[1].prime_system_prompt(system_prompt_2)
 
 video_path = './asset/sample.mp4'
 video_begin = 0
-video_end = 60
+video_end = 30
 duration = video_end - video_begin
 stream_infer.register_video_reader(video_path, video_begin, video_end)
 

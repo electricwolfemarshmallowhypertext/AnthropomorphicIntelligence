@@ -7,7 +7,7 @@ TAG_MAP = {
     'cyberpunk_2077': 'Solo commentators',
     'starcraft2': 'Solo commentators',
     'baldurs_gate_3': 'Solo commentators',
-    'black_myth_wukong': 'Solo commentators',
+    # 'black_myth_wukong': 'Solo commentators',
     'elden_ring': 'Solo commentators',
     'tears_of_the_kingdom': 'Solo commentators',
     'yu_gi_oh': 'Multiple commentators',

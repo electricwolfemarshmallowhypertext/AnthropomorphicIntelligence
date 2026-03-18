@@ -144,12 +144,12 @@ class ProAct_OmniModel(PreTrainedModel, GenerationMixin):
         for name, param in module.named_parameters():
             param.requires_grad = True
 
-    def set_threshold(self, threshold):
-        if hasattr(self, 'state_threhold'):
-            self.state_threhold = threshold
-            logger.info(f'Set state_threhold to {self.state_threhold}')
-        else:
-            logger.warning('No state_threhold attribute to set.')
+    # def set_threshold(self, threshold):
+    #     if hasattr(self, 'state_threhold'):
+    #         self.state_threhold = threshold
+    #         logger.info(f'Set state_threhold to {self.state_threhold}')
+    #     else:
+    #         logger.warning('No state_threhold attribute to set.')
 
     '''
     During training, `forward` computes main loss + active loss.
@@ -173,7 +173,7 @@ class ProAct_OmniModel(PreTrainedModel, GenerationMixin):
 
         if 'output_hidden_states' in kwargs and kwargs['output_hidden_states'] is False:
             output.hidden_states = None
-        torch.cuda.empty_cache()
+        # torch.cuda.empty_cache()
         
         return output
 

@@ -156,7 +156,7 @@ async def ws_stream(ws: WebSocket):
                     # 2. Get model and invoke method (implement 'set_assistant_count' logic here)
                     model = get_model()
                     await run_in_threadpool(model.set_assistant_count, req.count)
-                    await ws.send_text(StatusResponse(request_id=rid, text="ok").model_dump_json())
+                    # await ws.send_text(StatusResponse(request_id=rid, text="ok").model_dump_json())
 
                     logger.info(f"Received request to set assistant count to: {req.count}")
                     await ws.send_text(StatusResponse(request_id=rid, text=f"Assistant count set to {req.count}").model_dump_json())

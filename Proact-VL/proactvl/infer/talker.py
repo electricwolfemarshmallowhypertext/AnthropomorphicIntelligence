@@ -133,21 +133,21 @@ class Talker:
             sf.write(os.path.join(self.session_output_dir, f'final_commentary.wav'), final_audio, samplerate=TARGET_SR)
 
 
-    # TODO
-    def forward_tts(self, text, assistant_id, begin_second):
-        # convert text to speech using kokoro, and save to wav file under session output dir with name format '{begin_second}.wav'
-        self.word_buffers.extend(_split_words(text))
-        say_text = ' '.join(self.word_buffers)
-        gen = self.tts_pipeline(say_text, voice=self.assistant_voices[assistant_id], speed=1.5)
-        audio_chunks = []
-        for _, _, audio in gen:
-            audio_chunks.append(audio)
-        if len(audio_chunks) > 0:
-            audio = np.concatenate(audio_chunks)
-            # audio_1s = enforce_exact_duration(audio, sr=24000)
-            sf.write(os.path.join(self.session_output_dir, f'{begin_second}.wav'), audio, samplerate=TARGET_SR)
+    # # TODO
+    # def forward_tts(self, text, assistant_id, begin_second):
+    #     # convert text to speech using kokoro, and save to wav file under session output dir with name format '{begin_second}.wav'
+    #     self.word_buffers.extend(_split_words(text))
+    #     say_text = ' '.join(self.word_buffers)
+    #     gen = self.tts_pipeline(say_text, voice=self.assistant_voices[assistant_id], speed=1.5)
+    #     audio_chunks = []
+    #     for _, _, audio in gen:
+    #         audio_chunks.append(audio)
+    #     if len(audio_chunks) > 0:
+    #         audio = np.concatenate(audio_chunks)
+    #         # audio_1s = enforce_exact_duration(audio, sr=24000)
+    #         sf.write(os.path.join(self.session_output_dir, f'{begin_second}.wav'), audio, samplerate=TARGET_SR)
 
-        self.word_buffers = []
+    #     self.word_buffers = []
 
     def merge_tts_segments(self):
         pass

@@ -17,7 +17,7 @@
     - [3. SocialCC: Interactive Evaluation for Cultural Competence in Language Agents](#3-socialcc-interactive-evaluation-for-cultural-competence-in-language-agents)
     - [4. LearnArena: Benchmarking Learning Ability](#4-learnarena-benchmarking-learning-ability)
     - [5. PersonaArena: Role-Play Simulation and Evaluation](#5-personaarena-role-play-simulation-and-evaluation)
-    - [6. HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](#5-humanllm-towards-personalized-understanding-and-simulation-of-human-nature)
+    - [6. HumanLLM: Towards Personalized Understanding and Simulation of Human Nature](#6-humanllm-towards-personalized-understanding-and-simulation-of-human-nature)
     - [7. Proact-VL: A Proactive VideoLLM for Real-Time AI Companions](#7-proact-vl-a-proactive-videollm-for-real-time-ai-companions)
   - [Contributing](#contributing)
   - [Trademarks](#trademarks)

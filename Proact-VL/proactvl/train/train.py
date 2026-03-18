@@ -29,7 +29,7 @@ def set_model(model, training_args, model_args):
             model.llm.enable_input_require_grads()
         return
         
-    stage = model_args.finetune_strategy
+    stage = training_args.finetune_strategy
     if stage == "strategy3":
         model._freeze_parameters(model.llm)
         # LoRA
@@ -49,7 +49,7 @@ def set_model(model, training_args, model_args):
             # if 'omni' in model.model_name_or_path.lower():
             #     model.llm.thinker = get_peft_model(model.llm.thinker, lora_config)
             # else:
-        model.llm = get_peft_model(model.llm, lora_config)
+            model.llm = get_peft_model(model.llm, lora_config)
         # if 'omni' in model.model_name_or_path.lower():
         #     for name, param in model.llm.thinker.named_parameters():
         #         if "visual" in name:

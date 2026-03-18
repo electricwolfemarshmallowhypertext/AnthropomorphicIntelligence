@@ -7,7 +7,7 @@ from transformers import TrainingArguments
 @dataclass
 class CompanionTrainingArguments(TrainingArguments):
     """
-    Companinon training arguments, extending the base TrainingArguments class.
+    Companion training arguments, extending the base TrainingArguments class.
     """
     # debug: bool = field(
     #     default=False,

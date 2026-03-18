@@ -32,6 +32,8 @@ and interaction.
 ### Conda Environment Setup
 Environment for basic usage.
 ```
+conda create -n proactvl python=3.11 -y
+conda activate proactvl
 sh script/env/prepare_env.sh
 ```
 
