@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Proact-VL: A Proactive VideoLLM for Real-Time AI Companions</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Proact-VL: A Proactive VideoLLM for Real-Time AI Companions</h1>
+    <div class="header-right">
+      <span id="status" class="status-pill">Disconnected</span>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Left: video (≈2/3) -->
+    <section class="left-panel">
+      <section class="usage-guide" aria-label="Usage Guide">
+        <h3>How to Use</h3>
+        <ol>
+          <li>Select <strong>Start Webcam</strong>, <strong>Share Screen</strong>, or <strong>Upload Video</strong> to set the video stream.</li>
+          <li>Set the assistant count.</li>
+          <li>Configure assistant parameters.</li>
+          <li>Click <strong>Start Commentary</strong>.</li>
+        </ol>
+      </section>
+
+      <div id="video-container">
+        <video id="preview" playsinline></video>
+      </div>
+
+      <!-- Source selection and control -->
+      <div class="source-selection">
+        <button id="startWebcamBtn" type="button">Start Webcam</button>
+        <button id="startScreenBtn" type="button">Share Screen</button>
+        <button id="selectFileBtn" type="button">Upload Video</button>
+        <input id="videoFileInput" type="file" accept="video/*" style="display:none" />
+      </div>
+
+      <div class="controls">
+        <button id="stopBtn" type="button" disabled>Stop</button>
+      </div>
+    </section>
+
+    <!-- Right: dialogue (≈1/3) -->
+    <aside class="right-panel">
+      <!-- Model settings (collapsible) -->
+      <details class="settings-accordion" id="settingsAccordion" open>
+        <summary>
+          <div class="summary-content">
+            <h3 id="settings-title">Model Settings</h3>
+            <small id="settings-tip" class="muted">Adjust settings after pausing commentary</small>
+          </div>
+          <span class="chevron" aria-hidden="true"></span>
+        </summary>
+
+        <section class="settings-panel" aria-labelledby="settings-title" aria-describedby="settings-tip">
+          
+          <!-- 1. Assistant count selector -->
+          <div class="form-row form-row--inline">
+            <label for="assistantCountSelect" class="label-sm">Assistant Count</label>
+            <select id="assistantCountSelect">
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+            <button id="applyCountBtn" type="button" class="btn-sm">Set Count</button>
+            <small class="muted help-inline">Applying count resets and shows the configs below</small>
+          </div>
+
+          <!-- 2. Assistant config container (hidden by default) -->
+          <div id="assistantsConfigWrapper" style="display: none;">
+
+            <!-- Assistant 1 settings block (ID suffix: -1) -->
+            <div class="assistant-settings-block" id="assistant-block-1">
+              <h4>Assistant 1 (SPEAKER_0)</h4>
+              <fieldset id="settingsFieldset-1">
+                <!-- Threshold -->
+                <div class="form-row form-row--inline">
+                  <label for="thresholdRange-1" class="label-sm">Threshold</label>
+                  <input id="thresholdRange-1" type="range" min="0" max="1" step="0.01" value="0.50" />
+                  <input id="thresholdInput-1" type="number" min="0" max="1" step="0.01" value="0.50" inputmode="decimal" />
+                  <button id="applyThresholdBtn-1" type="button" class="ghost btn-sm">Apply</button>
+                  <small class="muted help-inline">0–1, higher means more conservative</small>
+                </div>
+                <!-- Cache -->
+                <div class="form-row form-row--inline">
+                  <label class="label-sm">Cache</label>
+                  <button id="clearCacheBtn-1" type="button" class="btn-sm">Clear Cache</button>
+                  <small class="muted help-inline">Clear this assistant's runtime state</small>
+                </div>
+                <!-- System prompt -->
+                <div class="form-row">
+                  <label for="systemPrompt-1">System Prompt</label>
+                  <textarea id="systemPrompt-1" rows="3" placeholder="e.g., You are a professional caster. Keep responses concise, structured, and focused on key events..."></textarea>
+                  <div class="row end">
+                    <button id="applySystemPromptBtn-1" type="button" class="primary btn-sm">Apply System Prompt</button>
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+  
+            <!-- Assistant 2 settings block (ID suffix: -2) -->
+            <div class="assistant-settings-block" id="assistant-block-2" style="display: none;">
+              <h4>Assistant 2 (SPEAKER_1)</h4>
+              <fieldset id="settingsFieldset-2" disabled>
+                <!-- Threshold -->
+                <div class="form-row form-row--inline">
+                  <label for="thresholdRange-2" class="label-sm">Threshold</label>
+                  <input id="thresholdRange-2" type="range" min="0" max="1" step="0.01" value="0.50" />
+                  <input id="thresholdInput-2" type="number" min="0" max="1" step="0.01" value="0.50" inputmode="decimal" />
+                  <button id="applyThresholdBtn-2" type="button" class="ghost btn-sm">Apply</button>
+                </div>
+                <!-- Cache -->
+                <div class="form-row form-row--inline">
+                  <label class="label-sm">Cache</label>
+                  <button id="clearCacheBtn-2" type="button" class="btn-sm">Clear Cache</button>
+                </div>
+                <!-- System prompt -->
+                <div class="form-row">
+                  <label for="systemPrompt-2">System Prompt</label>
+                  <textarea id="systemPrompt-2" rows="3" placeholder="e.g., You are a co-commentator focused on details and tactical analysis..."></textarea>
+                  <div class="row end">
+                    <button id="applySystemPromptBtn-2" type="button" class="primary btn-sm">Apply System Prompt</button>
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+  
+            <!-- Assistant 3 settings block (ID suffix: -3) -->
+            <div class="assistant-settings-block" id="assistant-block-3" style="display: none;">
+              <h4>Assistant 3 (SPEAKER_2)</h4>
+              <fieldset id="settingsFieldset-3" disabled>
+                <!-- Threshold -->
+                <div class="form-row form-row--inline">
+                  <label for="thresholdRange-3" class="label-sm">Threshold</label>
+                  <input id="thresholdRange-3" type="range" min="0" max="1" step="0.01" value="0.50" />
+                  <input id="thresholdInput-3" type="number" min="0" max="1" step="0.01" value="0.50" inputmode="decimal" />
+                  <button id="applyThresholdBtn-3" type="button" class="ghost btn-sm">Apply</button>
+                </div>
+                <!-- Cache -->
+                <div class="form-row form-row--inline">
+                  <label class="label-sm">Cache</label>
+                  <button id="clearCacheBtn-3" type="button" class="btn-sm">Clear Cache</button>
+                </div>
+                <!-- System prompt -->
+                <div class="form-row">
+                  <label for="systemPrompt-3">System Prompt</label>
+                  <textarea id="systemPrompt-3" rows="3" placeholder="e.g., You are an analyst focused on data-driven interpretation..."></textarea>
+                  <div class="row end">
+                    <button id="applySystemPromptBtn-3" type="button" class="primary btn-sm">Apply System Prompt</button>
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+
+          </div> <!-- /#assistantsConfigWrapper -->
+
+          <!-- Global status hint -->
+          <small id="settingsStatus" class="muted" aria-live="polite"></small>
+        </section>
+      </details>
+
+      <div class="right-header">
+        <h2>Live Commentary</h2>
+        <div class="row">
+          <button id="clearCommentaryBtn" type="button" class="ghost">Clear</button>
+          <button id="toggleCommentBtn" type="button" disabled aria-pressed="false">Start Commentary</button>
+        </div>
+      </div>
+
+      <div id="commentary-box" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+      <form id="queryForm" class="comment-input" autocomplete="off">
+        <input
+          id="queryInput"
+          type="text"
+          placeholder="One message per second... (Press Enter to send)"
+          maxlength="200"
+          aria-label="Enter your comment"
+        />
+        <button type="submit">Send</button>
+      </form>
+    </aside>
+  </main>
+
+  <!-- Optional: override backend WS address, place before main.js -->
+  <script>window.DEBUG=true;</script>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+  <script src="/static/main.js"></script>
+</body>
+</html>

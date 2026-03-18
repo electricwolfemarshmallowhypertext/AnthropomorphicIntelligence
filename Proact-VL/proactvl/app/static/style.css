@@ -1,0 +1,382 @@
+:root{
+  /* —— Light Gradient Theme —— */
+  --bg1:#eef4ff;
+  --bg2:#f9fbff;
+  --card:#ffffff;
+  --muted:#6b7280;          /* gray-500 */
+  --text:#111827;           /* gray-900 */
+  --brand:#2563eb;          /* blue-600 */
+  --brand-2:#16a34a;        /* green-600 */
+  --line:#e5e7eb;           /* gray-200 */
+  --line-strong:#d1d5db;    /* gray-300 */
+  --danger:#dc2626;         /* red-600 */
+
+  --radius:14px;
+  --radius-sm:10px;
+  --gap:16px;
+  --shadow:0 10px 28px rgba(17,24,39,.08);
+  --header-h:64px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans","PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--text);
+  background:radial-gradient(1200px 600px at 20% -10%, var(--bg1), var(--bg2) 55%);
+}
+
+/* Top bar */
+.app-header{
+  height:var(--header-h);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 20px;
+}
+.app-header h1{ margin:0; font-size:22px; font-weight:700; }
+.header-right{display:flex; align-items:center; gap:10px;}
+.status-pill{
+  display:inline-block; padding:6px 10px; border-radius:999px;
+  background:#eef2ff; color:#1e40af; border:1px solid #dbeafe;
+}
+
+/* Main layout: left 2fr | right 1fr */
+.main-container{
+  height:calc(100vh - var(--header-h));
+  padding:0 20px 20px;
+  display:grid;
+  grid-template-columns: minmax(680px, 2fr) minmax(420px, 1fr);
+  gap:20px; min-height:0;
+}
+
+/* Panels */
+.left-panel, .right-panel{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:16px;
+  box-shadow:var(--shadow);
+  min-height:0;
+}
+.left-panel{ display:flex; flex-direction:column; gap:12px; }
+
+.usage-guide{
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:#fff;
+  padding:10px 12px;
+}
+
+.usage-guide h3{
+  margin:0 0 6px;
+  font-size:15px;
+}
+
+.usage-guide > summary{
+  list-style:none;
+  cursor:pointer;
+  padding:8px 12px;
+  font-weight:600;
+  user-select:none;
+}
+
+.usage-guide > summary::-webkit-details-marker{ display:none; }
+
+.usage-guide > ol{
+  margin:0;
+  padding:0 0 0 18px;
+  color:var(--muted);
+}
+
+/* Video (themed) */
+#video-container{
+  position:relative;
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  overflow:hidden;
+  background:#000;
+  aspect-ratio:16/10;              /* Fixed 16:10 aspect ratio */
+}
+#preview{
+  width:100%; height:100%;
+  object-fit:contain;               /* Do not crop; leave black bars when necessary */
+  background:#000;
+}
+
+/* —— Model settings: collapsible —— */
+.settings-accordion{
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--card);
+  box-shadow:0 4px 16px rgba(17,24,39,.06);
+  overflow:auto;                    /* Scroll the entire accordion block */
+  max-height:38vh;                  /* Maximum expanded height; can scroll to the bottom */
+}
+@media (max-width:1100px){
+  .settings-accordion{ max-height:30vh; }
+}
+.settings-accordion > summary{
+  list-style:none;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:12px 14px;
+  cursor:pointer; user-select:none;
+  background:linear-gradient(180deg,#ffffff,#f7f9fc);
+  border-bottom:1px solid var(--line);
+  position:static;                  /* Non-sticky to avoid covering content */
+}
+.settings-accordion > summary::-webkit-details-marker{ display:none; }
+.settings-accordion .summary-content{ display:flex; flex-direction:column; gap:2px; }
+.settings-accordion h3{ margin:0; font-size:16px; }
+.settings-accordion .muted{ font-size:12px; color:var(--muted); }
+.settings-accordion .chevron{
+  width:12px; height:12px; border-right:2px solid var(--text); border-bottom:2px solid var(--text);
+  transform:rotate(-45deg); transition:transform .18s ease; opacity:.6;
+}
+.settings-accordion[open] .chevron{ transform:rotate(135deg); }
+
+/* Settings content card */
+.settings-panel{
+  padding:12px 14px;
+  background:var(--card);
+}
+.settings-panel fieldset[disabled]{ opacity:.6; pointer-events:none; filter:saturate(.85); }
+
+/* Form rows (compact) */
+.form-row{
+  display:flex; flex-direction:column; gap:8px;
+  padding:10px 0;
+  border-top:1px dashed var(--line);
+}
+.form-row:first-child{ border-top:none; padding-top:0; }
+.form-row--inline{
+  display:grid; align-items:center;
+  grid-template-columns: auto 200px 84px auto 1fr;
+  gap:8px 10px;
+}
+.help-inline{ grid-column:1 / -1; margin-top:-2px; }
+.label-sm{ min-width:42px; color:var(--muted); }
+.row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.row.end{ justify-content:flex-end; }
+.muted{ color:var(--muted); }
+
+/* Controls (light theme) */
+input[type="range"]{ width:200px; accent-color:var(--brand); }
+input[type="number"]{
+  width:84px; padding:6px 8px; border-radius:8px;
+  border:1px solid var(--line-strong); background:#fff; color:var(--text);
+}
+textarea{
+  width:100%; min-height:80px; resize:vertical; padding:10px 12px;
+  border-radius:10px; border:1px solid var(--line-strong); background:#fff; color:var(--text);
+}
+
+/* Buttons */
+button{
+  appearance:none; border:none; border-radius:12px; padding:10px 14px;
+  background:linear-gradient(180deg,#ffffff,#f3f4f6);
+  color:var(--text); font-weight:600; letter-spacing:.2px; cursor:pointer;
+  transition:transform .05s ease, box-shadow .15s ease, opacity .15s ease, filter .15s ease;
+  border:1px solid var(--line-strong);
+  box-shadow:0 1px 0 rgba(0,0,0,.03);
+}
+button:hover{ box-shadow:0 2px 10px rgba(17,24,39,.08); filter:brightness(1.02); }
+button:active{ transform:translateY(1px) scale(.99); }
+button:disabled{ opacity:.55; cursor:not-allowed; }
+button.primary{
+  background:linear-gradient(180deg,#3b82f6,#2563eb);
+  border-color:#2563eb; color:#fff;
+}
+button.ghost{ background:#fff; border:1px solid var(--line-strong); }
+.btn-sm{ padding:6px 10px; border-radius:10px; font-size:12px; }
+
+/* Source selection, stop */
+.source-selection, .controls{
+  display:flex; gap:10px; flex-wrap:wrap;
+}
+
+/* Right side: conversation column fills height and can scroll to the bottom */
+.right-panel{
+  display:flex; flex-direction:column; min-height:0;
+}
+.right-header{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin-bottom:10px;
+}
+#commentary-box{
+  border:1px solid var(--line);
+  border-radius:var(--radius-sm);
+  background:#ffffff;
+  padding:12px;
+  overflow:auto;            /* Scroll to the bottom */
+  flex:1;                   /* Occupy the remaining height of the right column */
+  display:flex; flex-direction:column; gap:10px;
+}
+
+/* Message bubbles (light theme) */
+.msg{ display:flex; flex-direction:column; gap:4px; }
+.msg .meta{ font-size:12px; color:var(--muted); }
+.msg .bubble{
+  padding:10px 12px; border-radius:12px; line-height:1.5;
+  background:#f3f4f6; border:1px solid var(--line);
+}
+.msg-user .bubble{ background:#eef2ff; border-color:#dbeafe; }
+.msg-model .bubble{ background:#ecfdf5; border-color:#d1fae5; }
+
+/* Input row fixed at the bottom (light theme) */
+.comment-input{
+  display:flex; gap:10px; margin-top:10px;
+}
+.comment-input input[type="text"]{
+  flex:1; padding:10px 12px; border-radius:12px;
+  border:1px solid var(--line-strong); background:#ffffff; color:var(--text);
+}
+
+/* —— Scrollbar styling (settings accordion & commentary box) —— */
+.settings-accordion::-webkit-scrollbar,
+#commentary-box::-webkit-scrollbar{
+  width:10px;
+}
+.settings-accordion::-webkit-scrollbar-track,
+#commentary-box::-webkit-scrollbar-track{
+  background:#f3f4f6; border-radius:8px; border:1px solid var(--line);
+}
+.settings-accordion::-webkit-scrollbar-thumb,
+#commentary-box::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#c7d2fe,#93c5fd);
+  border:1px solid #bfdbfe; border-radius:8px;
+}
+.settings-accordion::-webkit-scrollbar-thumb:hover,
+#commentary-box::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(180deg,#a5b4fc,#60a5fa);
+}
+.settings-accordion{ scrollbar-width:thin; scrollbar-color:#93c5fd #f3f4f6; }
+#commentary-box{ scrollbar-width:thin; scrollbar-color:#93c5fd #f3f4f6; }
+
+/* Responsive: switch to vertical layout on small screens */
+@media (max-width:1100px){
+  .main-container{ grid-template-columns:1fr; height:auto; }
+  #video-container{ aspect-ratio:auto; }
+}
+
+/* Default model style */
+.msg.msg-model .bubble {
+  /* Default style */
+}
+
+/* ======== Update: styles supporting integer IDs (0, 1, 2) ======== */
+/* Generated classes are speaker-0, speaker-1, speaker-2 */
+
+/* Assistant 1 (ID: 0) - Blue */
+.msg-model.speaker-0 .bubble,
+.msg-model.speaker-speaker_0 .bubble { /* Backward compatibility */
+  border-left: 3px solid #4DCCE2;
+}
+
+/* Assistant 2 (ID: 1) - Orange */
+.msg-model.speaker-1 .bubble,
+.msg-model.speaker-speaker_1 .bubble { /* Backward compatibility */
+  border-left: 3px solid #EA8533;
+}
+
+/* Assistant 3 (ID: 2) - Green */
+.msg-model.speaker-2 .bubble,
+.msg-model.speaker-speaker_2 .bubble { /* Backward compatibility */
+  border-left: 3px solid #22c55e;
+}
+
+/* Other possible IDs */
+.msg-model.speaker-3 .bubble { border-left: 3px solid #A855F7; } /* Purple */
+.msg-model.speaker-4 .bubble { border-left: 3px solid #EC4899; } /* Pink */
+.msg-model.speaker-5 .bubble { border-left: 3px solid #EAB308; } /* Yellow */
+
+/* ======== New: Assistant settings styles ======== */
+
+/* 1. Assistant count selector (radio button group) */
+.radio-group {
+  display: flex;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  overflow: hidden; /* Preserve rounded corner clipping */
+  width: min-content; /* Auto-fit width */
+}
+.radio-group input[type="radio"] {
+  display: none; /* Hide the original radio button */
+}
+.radio-group label {
+  padding: 6px 14px;
+  cursor: pointer;
+  background: var(--card);
+  color: var(--muted);
+  border-right: 1px solid var(--line);
+  transition: background .2s, color .2s, box-shadow .2s;
+  user-select: none;
+  font-weight: 500;
+  font-size: 13px;
+  min-width: 44px; /* Ensure enough width for numbers */
+  text-align: center;
+}
+.radio-group label:last-child {
+  border-right: none;
+}
+.radio-group input[type="radio"]:checked + label {
+  background: var(--bg1); /* Background color when active (light blue) */
+  color: var(--brand); /* Text color when active (blue) */
+  font-weight: 700;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.05);
+}
+/* .radio-group label:hover:not([:has(+ input:checked)]):not([:has(input:checked)]) {
+  background: #f9f9f9; 
+} */
+
+.radio-group input[type="radio"]:not(:checked) + label:hover {
+  background: #f9f9f9; /* Hover effect */
+}
+
+/* ======== New: Assistant settings styles ======== */
+
+/* 1. Dropdown selector style */
+select {
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* 2. Assistant config block container */
+#assistantsConfigWrapper {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+/* 3. Single Assistant settings block (card within a card) */
+.assistant-settings-block {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 12px;
+  background: linear-gradient(180deg, #ffffff, #fcfdff); /* Very subtle background distinction */
+  box-shadow: 0 2px 8px rgba(17,24,39,.04);
+}
+
+/* 4. Assistant block title */
+.assistant-settings-block h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--brand); /* Use the theme color for the title */
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 8px;
+}
+
+/* 5. Improve spacing of form rows inside the block */
+.assistant-settings-block .form-row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.assistant-settings-block .form-row:first-child {
+    padding-top: 0; /* The first form row has no top padding */
+    border-top: none; /* The first form row has no top border */
+}
