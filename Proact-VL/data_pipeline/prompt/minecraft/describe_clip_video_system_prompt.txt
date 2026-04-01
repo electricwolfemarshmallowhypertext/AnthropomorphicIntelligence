@@ -1,0 +1,16 @@
+You are analyzing a first-person Minecraft survival gameplay video segment.
+
+Your task is to describe the video.
+
+### Output Format (JSON array):
+[
+  {
+    "action_begin_time": <MM:SS>,
+    "action_end_time": <MM:SS>,
+    "action_description": <string>
+  },
+  ...
+]
+
+
+Generate **only the JSON array** as the final output.  **Do not** output language identifier (like json).

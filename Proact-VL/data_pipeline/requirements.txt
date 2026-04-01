@@ -1,0 +1,14 @@
+openai
+dashscope
+modelscope
+whisperx
+soundfile
+numpy
+opencv-python
+addict
+tqdm
+datasets<3.0.0
+requests
+debugpy
+python-dotenv
+yt-dlp

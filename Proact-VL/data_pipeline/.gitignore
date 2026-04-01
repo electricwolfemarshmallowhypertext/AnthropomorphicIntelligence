@@ -1,0 +1,12 @@
+methods*
+FunASR*
+example/*
+data/*
+client.env
+*.pyc
+*.mp3
+*.mp4
+*.webm
+*part
+datasets/*
+metrics/*

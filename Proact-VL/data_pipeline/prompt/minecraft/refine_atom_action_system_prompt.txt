@@ -1,0 +1,84 @@
+You are analyzing a segment of first-person Minecraft gameplay.
+Your task is to **refine and rewrite the atomic player action list** so that it matches the **tone and structure of in-game player guidance**.
+
+---
+
+#### Input:
+
+* **player_question**: the question or goal the player is trying to achieve.
+* **assistant_guidance**: how the assistant would explain or guide the player through this process.
+* **atom_actions**: a list of raw atomic player actions with timestamps and short descriptions.
+
+---
+
+#### Your task:
+
+1. **Refine and rewrite the atomic action list** into a smoother, more human-readable sequence of steps.
+2. **Preserve key actions** that align with the assistant’s guidance.
+3. **Remove unnecessary or irrelevant actions**, such as indecisive steps, menu hovering, or redundant toggling, unless they meaningfully illustrate the learning process.
+4. Use **natural, instructive tone**, as if narrating the process to the player (e.g., *"Now click 'Create New World'..."*, *"Type in your desired name..."*).
+5. Keep **timestamps** aligned with their corresponding steps (use the original action_begin_time and action_end_time).
+6. The output must be in **JSON format**, with each step represented as an object containing:
+
+   * `"action_begin_time"`
+   * `"action_end_time"`
+   * `"refined_description"` — your improved, guidance-style version of the original action description.
+
+---
+
+#### Example Input:
+
+```
+{
+  "player_question": "How do I create a new world and set it to Survival mode?",
+  "assistant_guidance": "To create a new world, go to Singleplayer > Create New World. Name your world (e.g., 'Tutorial World'), ensure Game Mode is set to Survival, then click 'Create New World'. You can customize settings like cheats or world type under 'More World Options' before creating.",
+  "atom_actions": [
+    {"action_begin_time": "0:24", "action_end_time": "0:30", "action_description": "The player is on the 'Select World' screen, hovering over an existing world named 'Building World'."},
+    {"action_begin_time": "0:31", "action_end_time": "0:39", "action_description": "The player clicks 'Create New World', opening the world creation menu with 'New World' as the default name."},
+    {"action_begin_time": "0:40", "action_end_time": "0:48", "action_description": "The player deletes the default name and types 'Tutorial World' into the 'World Name' field."},
+    {"action_begin_time": "0:49", "action_end_time": "1:04", "action_description": "The player hovers over the 'Game Mode Survival' button, reading its description about resource gathering and health management."},
+    {"action_begin_time": "1:05", "action_end_time": "1:17", "action_description": "The player cycles through game modes, briefly selecting 'Hardcore' mode, which is described as survival mode locked at hardest difficulty with only one life."},
+    {"action_begin_time": "1:30", "action_end_time": "1:33", "action_description": "The player reverts back to 'Game Mode Survival' for the new world."},
+    {"action_begin_time": "1:34", "action_end_time": "1:37", "action_description": "The player clicks 'More World Options...' to access advanced settings like world seed and structure generation."},
+    {"action_begin_time": "1:38", "action_end_time": "1:41", "action_description": "In the advanced options, the player reviews settings such as 'Generate Structures: ON', 'Allow Cheats: OFF', and then clicks 'Done' to return to the main creation screen."},
+    {"action_begin_time": "1:42", "action_end_time": "1:43", "action_description": "The player clicks the 'Create New World' button to finalize and generate the new world named 'Tutorial World'."}
+  ]
+}
+```
+
+---
+
+#### Example Output:
+
+```
+[
+  {
+    "action_begin_time": "0:31",
+    "action_end_time": "0:39",
+    "refined_description": "Click 'Create New World' to open the world creation menu."
+  },
+  {
+    "action_begin_time": "0:40",
+    "action_end_time": "0:48",
+    "refined_description": "Rename the default world to 'Tutorial World' so you can easily recognize it."
+  },
+  {
+    "action_begin_time": "0:49",
+    "action_end_time": "1:04",
+    "refined_description": "Set the Game Mode to 'Survival'—this mode lets you gather resources and manage health."
+  },
+  {
+    "action_begin_time": "1:34",
+    "action_end_time": "1:41",
+    "refined_description": "Open 'More World Options' to check settings like 'Generate Structures: ON' and 'Allow Cheats: OFF', then click 'Done'."
+  },
+  {
+    "action_begin_time": "1:42",
+    "action_end_time": "1:43",
+    "refined_description": "Finally, click 'Create New World' to start your new Survival adventure!"
+  }
+]
+```
+
+Generate **only the JSON array** as the final output.  **Do not** output language identifier (like json).
+
