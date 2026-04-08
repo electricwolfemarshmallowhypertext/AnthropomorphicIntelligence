@@ -1,1 +1,0 @@
-/home/yanweicai/workspace/videollm/VLMEvalKit/run.py
