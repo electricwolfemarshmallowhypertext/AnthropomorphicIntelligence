@@ -202,11 +202,18 @@ python -m evaluation.gaming.llm_score --model_id liveccbase_30_16384 \
 ```
 **F1, Time-Diff**
 ```
-python3 -m evaluation.gaming.f1_timediff \
+python -m evaluation.gaming.f1_timediff \
     results/proactvl/liveccbase_30_16384.jsonl  \
     --reference results/anns/all_in_one_val_proactive.jsonl \
     --output results/evaluation/f1/proactvl/liveccbase_30_16384.json \
     --alpha 0.2 \
+    --verbose
+
+# F1 only
+python -m evaluation.gaming.f1_only \
+    results/proactvl/liveccbase_30_16384.jsonl  \
+    --reference results/anns/all_in_one_val_proactive.jsonl \
+    --output results/evaluation/f1/proactvl/liveccbase_30_16384.json \
     --verbose
 ```
 **PAUC**

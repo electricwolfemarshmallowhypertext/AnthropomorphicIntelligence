@@ -593,9 +593,9 @@ def main():
     # Overall statistics
     print("=" * 80)
     print(f"Overall:")
-        print(f"  Timediff: sample_count={len(all_timediff_values)}, "
-            f"avg={result['overall']['timediff']['avg']:.2f}s")
-        print(f"  Overlap (macro, equal weight per sample), sample_count={result['overall']['overlap_macro']['sample_count']}:")
+    print(f"  Timediff: sample_count={len(all_timediff_values)}, "
+        f"avg={result['overall']['timediff']['avg']:.2f}s")
+    print(f"  Overlap (macro, equal weight per sample), sample_count={result['overall']['overlap_macro']['sample_count']}:")
     print(f"    Recall: {result['overall']['overlap_macro']['recall']:.4f}")
     print(f"    Precision: {result['overall']['overlap_macro']['precision']:.4f}")
     print(f"    F1: {result['overall']['overlap_macro']['f1']:.4f}")
