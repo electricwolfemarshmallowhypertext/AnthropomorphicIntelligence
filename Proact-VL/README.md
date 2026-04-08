@@ -153,6 +153,7 @@ MODEL_ID='proactvl_base_liveccbase'
 python -m evaluation.gaming.distributed_generate_gaming --model_name_or_path ${BASE_MODEL} \
     --ckpt_path ${CKPT_PATH} --num_workers $(get_gpu_count) --model_id ${MODEL_ID} \
     --state_threshold 0.3 \
+    --dataset_name [TO_BE_RELEASED] \
     --test_name 'streaming_games' \
     --video_dir $HOME/ds/DATA \
     --output_dir ./results/proactvl/streaming \
