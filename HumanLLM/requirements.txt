@@ -26,5 +26,5 @@ deepspeed
 sentence_transformers
 emoji
 langdetect
-flash-attn-2.8.1
+flash-attn
 matplotlib
