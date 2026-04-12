@@ -205,4 +205,4 @@ If you find our paper, dataset, or code useful, please consider citing our work:
 
 ## 📄 Contact
 
-If you would like early access to the model weights and dataset, or have any questions or would like to discuss this work, please contact us at [lilin22wz@gmail.com](mailto:lilin22wz@gmail.com).
+If you have any questions or would like to discuss this work, please contact us at [lilin22wz@gmail.com](mailto:lilin22wz@gmail.com).
