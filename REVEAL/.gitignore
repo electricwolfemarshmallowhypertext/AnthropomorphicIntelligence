@@ -1,0 +1,6 @@
+/data/
+/saves/
+/radar.egg-info/
+/wandb/
+__pycache__/
+train.log
