@@ -34,7 +34,7 @@
     - [1. Quick Start](#1-quick-start)
     - [2. Model Training](#2-model-training)
     - [3. Dataset Build](#3-dataset-build)
-  - [📄 License](#-license)
+  - [📄 Contact](#-contact)
 
 ---
 
