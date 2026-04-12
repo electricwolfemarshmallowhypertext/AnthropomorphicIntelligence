@@ -5,7 +5,6 @@
 <!-- [![arXiv](https://img.shields.io/badge/arXiv-2601.21912-b31b1b.svg)](https://arxiv.org/abs/2601.21912) -->
 [![Hugging Face Model](https://img.shields.io/badge/🤗_Hugging_Face-Models-yellow)](https://huggingface.co/collections/bmbgsj/reveal)
 [![Hugging Face Dataset](https://img.shields.io/badge/🤗_Hugging_Face-AIGC--text--bank-blue)](https://huggingface.co/datasets/bmbgsj/AIGC-text-bank)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/downloads/)
 
 **REVEAL is a reasoning-driven framework that shifts AIGC detection from opaque classification to transparent, interpretable, chain-of-thought analysis.**
@@ -204,6 +203,6 @@ If you find our paper, dataset, or code useful, please consider citing our work:
 
 ---
 
-## 📄 License
+## 📄 Contact
 
-This project is licensed under the [MIT License](LICENSE).
+If you would like early access to the model weights and dataset, or have any questions or would like to discuss this work, please contact us at [lilin22wz@gmail.com](mailto:lilin22wz@gmail.com).
