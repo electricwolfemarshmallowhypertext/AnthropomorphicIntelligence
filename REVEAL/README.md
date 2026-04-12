@@ -38,21 +38,6 @@
 
 ---
 
-## 📥 Datasets & Models
-
-We provide the full AIGC-text-bank dataset and our REVEAL models. Depending on your needs, you can choose between binary (2-class) models or fine-grained (3-class) models.
-
-*   **Dataset:**
-    *   [**AIGC-text-bank**](https://huggingface.co/datasets/bmbgsj/AIGC-text-bank)
-*   **REVEAL (Standard Reasoning Models):**
-    *   [**REVEAL 2-Class**](https://huggingface.co/bmbgsj/REVEAL_think_2class) (Human vs. AI)
-    *   [**REVEAL 3-Class**](https://huggingface.co/bmbgsj/REVEAL_think_3class) (Human vs. AI-Native vs. AI-Polish)
-*   **REVEAL-Fast (Direct Classification Models):**
-    *   [**REVEAL-Fast 2-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_2class) (Human vs. AI)
-    *   [**REVEAL-Fast 3-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_3class) (Human vs. AI-Native vs. AI-Polish)
-
----
-
 ## ✨ Overview
 
 The rapid advancement of Large Language Models (LLMs) has made AI-generated content (AIGC) increasingly indistinguishable from human writing. Existing detectors often rely on opaque black-box classifiers that struggle to generalize and fail to provide interpretable evidence, especially in nuanced scenarios like human-AI collaborative writing.
@@ -65,6 +50,21 @@ To address this, we introduce two core contributions:
 <div align="center">
   <img src="assets/framework.jpg" alt="REVEAL Framework">
 </div>
+
+---
+
+## 📥 Datasets & Models
+
+We provide the full AIGC-text-bank dataset and our REVEAL models. Depending on your needs, you can choose between binary (2-class) models or fine-grained (3-class) models.
+
+*   **Dataset:**
+    *   [**AIGC-text-bank**](https://huggingface.co/datasets/bmbgsj/AIGC-text-bank)
+*   **REVEAL (Standard Reasoning Models):**
+    *   [**REVEAL 2-Class**](https://huggingface.co/bmbgsj/REVEAL_think_2class) (Human vs. AI)
+    *   [**REVEAL 3-Class**](https://huggingface.co/bmbgsj/REVEAL_think_3class) (Human vs. AI-Native vs. AI-Polish)
+*   **REVEAL-Fast (Direct Classification Models):**
+    *   [**REVEAL-Fast 2-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_2class) (Human vs. AI)
+    *   [**REVEAL-Fast 3-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_3class) (Human vs. AI-Native vs. AI-Polish)
 
 ---
 
