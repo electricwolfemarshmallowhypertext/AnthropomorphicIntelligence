@@ -26,15 +26,30 @@
   - [📢 Latest News](#-latest-news)
   - [📑 Table of Contents](#-table-of-contents)
   - [✨ Overview](#-overview)
+  - [📥 Datasets \& Models](#-datasets--models)
   - [🚀 Installation](#-installation)
     - [Prerequisites](#prerequisites)
     - [Environment Setup](#environment-setup)
-  - [📥 Datasets \& Models](#-datasets--models)
   - [💻 Usage](#-usage)
     - [1. Quick Start](#1-quick-start)
     - [2. Model Training](#2-model-training)
     - [3. Dataset Build](#3-dataset-build)
   - [📄 License](#-license)
+
+---
+
+## 📥 Datasets & Models
+
+We provide the full AIGC-text-bank dataset and our REVEAL models. Depending on your needs, you can choose between binary (2-class) models or fine-grained (3-class) models.
+
+*   **Dataset:**
+    *   [**AIGC-text-bank**](https://huggingface.co/datasets/bmbgsj/AIGC-text-bank)
+*   **REVEAL (Standard Reasoning Models):**
+    *   [**REVEAL 2-Class**](https://huggingface.co/bmbgsj/REVEAL_think_2class) (Human vs. AI)
+    *   [**REVEAL 3-Class**](https://huggingface.co/bmbgsj/REVEAL_think_3class) (Human vs. AI-Native vs. AI-Polish)
+*   **REVEAL-Fast (Direct Classification Models):**
+    *   [**REVEAL-Fast 2-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_2class) (Human vs. AI)
+    *   [**REVEAL-Fast 3-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_3class) (Human vs. AI-Native vs. AI-Polish)
 
 ---
 
@@ -79,21 +94,6 @@ pip install flash-attn==2.8.3 --no-build-isolation
 pip install wandb
 wandb login
 ```
-
----
-
-## 📥 Datasets & Models
-
-We provide the full AIGC-text-bank dataset and our REVEAL models. Depending on your needs, you can choose between binary (2-class) models or fine-grained (3-class) models.
-
-*   **Dataset:**
-    *   [**AIGC-text-bank**](https://huggingface.co/datasets/bmbgsj/AIGC-text-bank)
-*   **REVEAL (Standard Reasoning Models):**
-    *   [**REVEAL 2-Class**](https://huggingface.co/bmbgsj/REVEAL_think_2class) (Human vs. AI)
-    *   [**REVEAL 3-Class**](https://huggingface.co/bmbgsj/REVEAL_think_3class) (Human vs. AI-Native vs. AI-Polish)
-*   **REVEAL-Fast (Direct Classification Models):**
-    *   [**REVEAL-Fast 2-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_2class) (Human vs. AI)
-    *   [**REVEAL-Fast 3-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_3class) (Human vs. AI-Native vs. AI-Polish)
 
 ---
 
