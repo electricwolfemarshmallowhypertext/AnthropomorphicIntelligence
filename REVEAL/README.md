@@ -49,7 +49,7 @@ To address this, we introduce two core contributions:
 2. **REVEAL**: A novel detection framework built on the *Think-then-Answer* paradigm. It is trained via **Supervised Fine-Tuning (SFT)** to initialize reasoning capabilities, followed by **Reinforcement Learning (RL)** to refine reasoning chains, improve logical consistency, and reduce hallucinations.
 
 <div align="center">
-  <img src="assets/framework.jpg" alt="REVEAL Framework">
+  <img src="assets/framework.png" alt="REVEAL Framework">
 </div>
 
 ---
