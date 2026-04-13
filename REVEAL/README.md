@@ -126,7 +126,7 @@ bash scripts/rl.sh
 Follow these steps only if you wish to reproduce our data construction pipeline or synthesize a custom AIGC-text-bank from scratch.
 
 **Step 3.1: Prepare Human Data**  
-Place your raw human-written corpus into `data/aigc-text-bank/human_data/human_data.jsonl`. Ensure the data format strictly follows the structure provided in `human_data_sample.jsonl`.
+Place your raw human-written corpus into `data/aigc-text-bank/human_data/human_data.jsonl`. Ensure the data format strictly follows the structure provided in `aigc-text-bank/human_data_sample.jsonl`.
 
 **Step 3.2: Generate AI Text**  
 Synthesize the corresponding AI-generated counterparts based on your human data. For security and simplicity, export your API key as an environment variable first:
