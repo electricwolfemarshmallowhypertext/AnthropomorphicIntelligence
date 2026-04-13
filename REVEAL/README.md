@@ -178,4 +178,4 @@ If you find our paper, dataset, or code useful, please consider citing our work:
 
 ## 📄 Contact
 
-If you have any questions or would like to discuss this work, please contact us at [lilin22wz@gmail.com](mailto:lilin22wz@gmail.com).
+if you have any questions about the paper, or want to access the datasets/models, please contact us at [lilin22wz@gmail.com](mailto:lilin22wz@gmail.com).
