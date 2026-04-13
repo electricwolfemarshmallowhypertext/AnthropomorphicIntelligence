@@ -17,7 +17,7 @@ from deepspeed.runtime.zero.config import ZeroStageEnum
 from deepspeed.runtime.fp16.loss_scaler import LossScaler 
 from deepspeed.utils.tensor_fragment import fragment_address
 from radar.utils.prompts import build_2class_prompt, build_3class_prompt, build_4class_prompt
-from radar.rl.reward import format_reward, answer_reward, consistency_reward
+from radar.rl.reward import format_reward, answer_reward, consistency_reward, init_eval_prompt
 
 if hasattr(torch.serialization, 'add_safe_globals'):
     torch.serialization.add_safe_globals([ZeroStageEnum])
@@ -41,7 +41,13 @@ if __name__ == "__main__":
     )
 
     JSONL_FILE_PATHS = [path.strip() for path in script_args.dataset_name.split(",")]
-    INSTRUCTION = build_4class_prompt()
+    if "4class" in script_args.dataset_name.lower():
+        INSTRUCTION = build_4class_prompt()
+    elif "3class" in script_args.dataset_name.lower():
+        INSTRUCTION = build_3class_prompt()
+    else:
+        INSTRUCTION = build_2class_prompt()
+    init_eval_prompt(script_args.dataset_name)
 
     def load_jsonl(paths):
         data = []

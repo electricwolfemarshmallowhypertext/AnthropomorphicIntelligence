@@ -108,12 +108,13 @@ python inference/fast.py \
 You can train the model from scratch following our two-stage pipeline. 
 
 ```bash
+export OPENAI_API_KEY="sk-your-api-key-here"
+
 # Prepare: Download and split the dataset
 bash scripts/data.sh
 
 # Stage 1: Supervised Fine-Tuning (SFT)
 # Initializes the model with structured reasoning trajectories.
-export OPENAI_API_KEY="sk-your-api-key-here"
 bash scripts/sft.sh
 
 # Stage 2: Reinforcement Learning (RL)

@@ -1,15 +1,23 @@
-import asyncio
-from openai import AsyncAzureOpenAI
-from azure.identity import ChainedTokenCredential, AzureCliCredential, ManagedIdentityCredential, get_bearer_token_provider
+import os
 import re
+import asyncio
+from openai import AsyncOpenAI
 from radar.utils.prompts import build_2class_eval_prompt, build_3class_eval_prompt, build_4class_eval_prompt
 
-AZURE_SCOPE = "api://trapi/.default"
-AZURE_API_VERSION = '2024-10-21'
-AZURE_DEPLOYMENT = "gpt-4o_2024-11-20"
-AZURE_ENDPOINT = 'https://trapi.research.microsoft.com/gcr/shared'
 CONCURRENCY_LIMIT = 5 
-EVAL_PROMPT = build_4class_eval_prompt()
+OPENAI_MODEL_NAME = "gpt-4o"
+OPENAI_BASE_URL = "https://api.openai.com/v1"
+EVAL_PROMPT = None
+
+def init_eval_prompt(dataset_name: str):
+    global EVAL_PROMPT
+    dataset_name_lower = dataset_name.lower()
+    if "4class" in dataset_name_lower:
+        EVAL_PROMPT = build_4class_eval_prompt()
+    elif "3class" in dataset_name_lower:
+        EVAL_PROMPT = build_3class_eval_prompt()
+    else:
+        EVAL_PROMPT = build_2class_eval_prompt()
 
 def extract_xml_content(text: str, tag: str):
     pattern = re.compile(f"<{tag}>(.*?)</{tag}>", re.DOTALL | re.IGNORECASE)
@@ -48,21 +56,29 @@ def answer_reward(completions: list[list[dict]], solution: list[str], **kwargs) 
             
     return rewards
 
-async def call_gpt_eval_model(client: AsyncAzureOpenAI, formatted_input: str, semaphore: asyncio.Semaphore):
+async def call_gpt_eval_model(client: AsyncOpenAI, formatted_input: str, semaphore: asyncio.Semaphore):
+    if EVAL_PROMPT is None:
+        raise ValueError("EVAL_PROMPT is not initialized. Please call init_eval_prompt() first.")
+    
     full_prompt = f"{EVAL_PROMPT}\n\n{formatted_input}"
     max_retries = 5
 
-    async with semaphore:
-        for attempt in range(max_retries):
+    for attempt in range(max_retries):
+        async with semaphore:
             try:
                 response = await client.chat.completions.create(
-                    model=AZURE_DEPLOYMENT,
-                    messages=[{"role": "user", "content": full_prompt}]
+                    model=OPENAI_MODEL_NAME,
+                    messages=[{"role": "user", "content": full_prompt}],
+                    max_tokens=1024
                 )
                 return response.choices[0].message.content.strip()
             except Exception as e:
-                print(f"[Error] API call failed: {e}. Retrying...")
-                await asyncio.sleep(5)
+                print(f"[Error] API call failed: {e}. Retrying (attempt {attempt+1}/{max_retries})...")
+                if "429" in str(e) or "limit" in str(e).lower():
+                    await asyncio.sleep(10 + attempt * 5)
+                else:
+                    await asyncio.sleep(5)
+                continue
     
     print(f"[Fail] Gave up on prompt after {max_retries} attempts.")
     return None
@@ -101,15 +117,13 @@ async def process_single_item(client, solution_str, original_text, semaphore):
     return consistency_score
 
 def consistency_reward(completions: list[list[dict]], text: list[str], **kwargs) -> list[float]:
-    credential = get_bearer_token_provider(
-        ChainedTokenCredential(AzureCliCredential(), ManagedIdentityCredential()), AZURE_SCOPE
-    )
+    api_key = os.getenv("OPENAI_API_KEY", "dummy_key")
     
     async def run_batch():
-        async_client = AsyncAzureOpenAI(
-            azure_endpoint=AZURE_ENDPOINT,
-            azure_ad_token_provider=credential,
-            api_version=AZURE_API_VERSION,
+        async_client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=OPENAI_BASE_URL,
+            timeout=120.0,
         )
         sem = asyncio.Semaphore(CONCURRENCY_LIMIT)
         

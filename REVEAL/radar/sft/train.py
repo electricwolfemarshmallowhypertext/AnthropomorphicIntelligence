@@ -139,23 +139,23 @@ def main(args):
 
     train_dataset = raw_dataset.map(create_sft_prompt, remove_columns=list(raw_dataset.features))
 
-    sample = train_dataset[0]
-    ids = sample["input_ids"]
-    labels = sample["labels"]
-    weights = sample["loss_weights"]
-    print(f"Total Sequence Length: {len(ids)}")
+    # sample = train_dataset[0]
+    # ids = sample["input_ids"]
+    # labels = sample["labels"]
+    # weights = sample["loss_weights"]
+    # print(f"Total Sequence Length: {len(ids)}")
     
-    print("-" * 20 + " Full Decoded Text " + "-" * 20)
-    print(tokenizer.decode(ids, skip_special_tokens=False))
-    print("\n" + "-" * 20 + " Token Detail View " + "-" * 20)
-    print(f"{'IDX':<5} | {'TokenID':<8} | {'Label':<6} | {'Weight':<6} | {'Token String'}")
-    print("-" * 60)
+    # print("-" * 20 + " Full Decoded Text " + "-" * 20)
+    # print(tokenizer.decode(ids, skip_special_tokens=False))
+    # print("\n" + "-" * 20 + " Token Detail View " + "-" * 20)
+    # print(f"{'IDX':<5} | {'TokenID':<8} | {'Label':<6} | {'Weight':<6} | {'Token String'}")
+    # print("-" * 60)
     
-    for i, (tid, lbl, w) in enumerate(zip(ids, labels, weights)):
-        token_str = tokenizer.decode([tid]).replace('\n', '\\n')
-        marker = "  <--- WEIGHT BOOST" if w > 1.0 else ""
-        print(f"{i:<5} | {tid:<8} | {lbl:<6} | {w:<6.1f} | {token_str}{marker}")
-    print("="*80 + "\n")
+    # for i, (tid, lbl, w) in enumerate(zip(ids, labels, weights)):
+    #     token_str = tokenizer.decode([tid]).replace('\n', '\\n')
+    #     marker = "  <--- WEIGHT BOOST" if w > 1.0 else ""
+    #     print(f"{i:<5} | {tid:<8} | {lbl:<6} | {w:<6.1f} | {token_str}{marker}")
+    # print("="*80 + "\n")
 
     def weighted_data_collator(features):
         weights = [f.pop("loss_weights") for f in features]

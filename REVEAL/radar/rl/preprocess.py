@@ -68,6 +68,7 @@ def main(args):
     files = glob.glob(os.path.join(args.input_dir, "**/*.jsonl"), recursive=True)
     for file_path in files:
         label = determine_label_from_filename(file_path, args.num_classes)
+        if label is None: continue
         
         print(f"  - Loading {file_path} -> Classified as [{label}]")
         file_data = load_jsonl(file_path)        
