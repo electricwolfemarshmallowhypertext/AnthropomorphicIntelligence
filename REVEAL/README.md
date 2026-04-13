@@ -11,7 +11,6 @@
 ## 📑 Table of Contents
 
 - [🔍 Reasoning-Aware AIGC Detection via Alignment and Reinforcement](#-reasoning-aware-aigc-detection-via-alignment-and-reinforcement)
-  - [📢 Latest News](#-latest-news)
   - [📑 Table of Contents](#-table-of-contents)
   - [✨ Overview](#-overview)
   - [🚀 Installation](#-installation)
