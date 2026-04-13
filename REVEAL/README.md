@@ -2,22 +2,10 @@
 
 # 🔍 Reasoning-Aware AIGC Detection via Alignment and Reinforcement
 
-<!-- [![arXiv](https://img.shields.io/badge/arXiv-2601.21912-b31b1b.svg)](https://arxiv.org/abs/2601.21912) -->
-[![Hugging Face Model](https://img.shields.io/badge/🤗_Hugging_Face-Models-yellow)](https://huggingface.co/collections/bmbgsj/reveal)
-[![Hugging Face Dataset](https://img.shields.io/badge/🤗_Hugging_Face-AIGC--text--bank-blue)](https://huggingface.co/datasets/bmbgsj/AIGC-text-bank)
-[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://www.python.org/downloads/)
-
 **REVEAL is a reasoning-driven framework that shifts AIGC detection from opaque classification to transparent, interpretable, chain-of-thought analysis.**
 
 </div>
 
----
-
-## 📢 Latest News
-
-- **[2026-04-12]** 🤗 We release our **AIGC-text-bank** dataset on [Hugging Face](https://huggingface.co/datasets/bmbgsj/AIGC-text-bank).
-- **[2026-04-12]** 🤗 We release our **REVEAL** models on [Hugging Face](https://huggingface.co/collections/bmbgsj/reveal).
-- **[2026-04-06]** 🎉 Our paper is accepted to **Findings of ACL 2026**.
 ---
 
 ## 📑 Table of Contents
@@ -26,7 +14,6 @@
   - [📢 Latest News](#-latest-news)
   - [📑 Table of Contents](#-table-of-contents)
   - [✨ Overview](#-overview)
-  - [📥 Datasets \& Models](#-datasets--models)
   - [🚀 Installation](#-installation)
     - [Prerequisites](#prerequisites)
     - [Environment Setup](#environment-setup)
@@ -51,21 +38,6 @@ To address this, we introduce two core contributions:
 <div align="center">
   <img src="assets/framework.png" alt="REVEAL Framework">
 </div>
-
----
-
-## 📥 Datasets & Models
-
-We provide the full AIGC-text-bank dataset and our REVEAL models. Depending on your needs, you can choose between binary (2-class) models or fine-grained (3-class) models.
-
-*   **Dataset:**
-    *   [**AIGC-text-bank**](https://huggingface.co/datasets/bmbgsj/AIGC-text-bank)
-*   **REVEAL (Standard Reasoning Models):**
-    *   [**REVEAL 2-Class**](https://huggingface.co/bmbgsj/REVEAL_think_2class) (Human vs. AI)
-    *   [**REVEAL 3-Class**](https://huggingface.co/bmbgsj/REVEAL_think_3class) (Human vs. AI-Native vs. AI-Polish)
-*   **REVEAL-Fast (Direct Classification Models):**
-    *   [**REVEAL-Fast 2-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_2class) (Human vs. AI)
-    *   [**REVEAL-Fast 3-Class**](https://huggingface.co/bmbgsj/REVEAL_fast_3class) (Human vs. AI-Native vs. AI-Polish)
 
 ---
 
