@@ -129,7 +129,7 @@ in the same tone and genre as the sample.
     elif prefix == "presidential_speech":
         user_prompt += "\nFor this text, you should maintain a polite, formal tone. Show gratitude to potential guests."
 
-    user_prompt += f"""\nYou MUST make your output about about {int(target_length * 0.9)} and {int(target_length * 1.1)} words.
+    user_prompt += f"""\nYou MUST make your output about {int(target_length * 0.9)} and {int(target_length * 1.1)} words.
 If you exceed or fall short of this range, your output will be rejected.\nDo NOT mention word counts, constraints, or instructions. Simply write the text."""
 
     for attempt in range(max_retries):

@@ -57,7 +57,7 @@ async def async_call_gpt(item, semaphore, max_retries):
         return item
 
     user_prompt = f"""Please polish and improve the following text.\n
-You MUST make your output about about {int(target_length * 0.9)} and {int(target_length * 1.1)} words.
+You MUST make your output about {int(target_length * 0.9)} and {int(target_length * 1.1)} words.
 If you exceed or fall short of this range, your output will be rejected.\nDo NOT mention word counts, constraints, or instructions. \n
 And output only the polished text. Do not include explanations or preambles.
 
