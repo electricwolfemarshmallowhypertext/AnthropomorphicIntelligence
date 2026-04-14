@@ -1,23 +1,15 @@
-import json
-import os
-import numpy as np
-from tqdm import tqdm
-from openai import OpenAI  
-import time
-import re
-import csv
+#!/usr/bin/env python3
 import argparse
-from utils import utils
-from yacs.config import CfgNode
-from langchain.schema import HumanMessage
-from filelock import FileLock
-import threading
-from copy import deepcopy
-from typing import Any, Dict, List, Tuple, Optional, NamedTuple
+import asyncio
+import csv
+import json
+import re
+from collections import defaultdict
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-os.environ["OPENAI_API_VERSION"] = "2024-12-01-preview"
-
-lock = threading.Lock()
+import yaml
+from openai import AsyncOpenAI
 
 METRICS = [
     "Knowledge Accuracy",
@@ -30,92 +22,11 @@ METRICS = [
     "Interaction Richness",
 ]
 
-def extract_scores(response):
-    regex = (
-        r"Knowledge Accuracy:\s*\[?\s*(\d+)\s*\]?.*?"
-        r"Emotional Expression:\s*\[?\s*(\d+)\s*\]?.*?"
-        r"Personality Traits:\s*\[?\s*(\d+)\s*\]?.*?"
-        r"Behavioral Accuracy:\s*\[?\s*(\d+)\s*\]?.*?"
-        r"Immersion:\s*\[?\s*(\d+)\s*\]?.*?"
-        r"Adaptability:\s*\[?\s*(\d+)\s*\]?.*?"
-        r"Behavioral Coherence:\s*\[?\s*(\d+)\s*\]?.*?"
-        r"Interaction Richness:\s*\[?\s*(\d+)\s*\]?.*?"
-    )
-    match = re.search(regex, response or "", re.DOTALL)
-    if not match:
-        return tuple([-1] * len(METRICS))
-    return tuple(int(x) for x in match.groups())
-
-def extract_scores_json(response: str):
-    try:
-        obj = json.loads((response or "").strip())
-        key_map = {
-            "knowledge accuracy": "Knowledge Accuracy",
-            "emotional expression": "Emotional Expression",
-            "personality traits": "Personality Traits",
-            "behavioral accuracy": "Behavioral Accuracy",
-            "immersion": "Immersion",
-            "adaptability": "Adaptability",
-            "behavioral coherence": "Behavioral Coherence",
-            "interaction richness": "Interaction Richness",
-        }
-        out = []
-        for k in METRICS:
-            v = None
-            if k in obj:
-                v = obj[k]
-            else:
-                for kk in obj.keys():
-                    if key_map.get(kk.lower(), kk) == k:
-                        v = obj[kk]
-                        break
-            if not isinstance(v, int):
-                return tuple([-1]*len(METRICS))
-            out.append(int(v))
-        return tuple(out)
-    except Exception:
-        return tuple([-1]*len(METRICS))
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-c", "--config_file", type=str, default="config/evaluate.yaml", help="Path to config file"
-    )
-    parser.add_argument(
-        "-l", "--log_file", type=str, default="", help="Path to log file"
-    )
-    parser.add_argument(
-        "-n", "--log_name", type=str, default=str(os.getpid()), help="Name of logger"
-    )
-    args = parser.parse_args()
-    return args
-
-def strip_reasoning_blocks(text: str) -> str:
-    if not text:
-        return ""
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
-    return text.strip()
-
-def _call_llm(LLM, prompt: str) -> str:
-    if 'Chat' in type(LLM).__name__:
-        raw = LLM([HumanMessage(content=prompt)]).content
-    else:
-        raw = LLM(prompt)
-    return strip_reasoning_blocks(raw)
-
-def _pick_judge_creds(j: dict, config: CfgNode):
-    
-    mdl = j.get("model") or j.get("llm") or j.get("name")
-    ak = j.get("api_key", config.get("api_key", "empty"))
-    ab = j.get("api_base", config.get("api_base", ""))
-    if ak in (None, ""):
-        ak = "empty"
-    return mdl, ak, ab
-# =====================================================================
-
-def critic(LLM,scene,character,actions):
-    prompt = f"""
+CRITIC_PROMPT_TEMPLATE = """
 Please execute the following role-play and identify any issues based on these strict evaluation criteria:
+
+- Target Character Name:
+{target_character_name}
 
 - Scene Description: 
 {scene}
@@ -127,143 +38,146 @@ Please execute the following role-play and identify any issues based on these st
 {actions}
 
 Strict Evaluation Criteria:
-1. Factual Accuracy: Flag elements that conflict with the historical or factual backdrop.
-2. Character Consistency: Identify mismatches between actions/dialogue and defined traits or goals.
-3. Logical Coherence: Point out fallacies or contradictions with established context or character logic.
-4. Content Redundancy: Note repetitive dialogue or actions that reduce engagement or realism.
-5. Emotional Expression: Judge whether emotions are appropriate and convincingly conveyed; mark discrepancies.
-6. Interaction Adaptability: Critique unnatural or contextually inappropriate responses to others.
-7. Creativity and Originality: Call out generic or unoriginal actions or replies.
-8. Detail Handling: Scrutinize scene and behavior details for depth and accuracy gaps.
-9. Style Consistency: Ensure narrative and language style remain consistent; note deviations.
+1. Factual Accuracy: Identify and point out any elements that do not accurately match the historical or factual backdrop.
+2. Character Consistency: Explicitly highlight inconsistencies between the character's actions, dialogues, and their predefined traits and goals.
+3. Logical Coherence: Point out any logical fallacies or actions that contradict the established context or character logic.
+4. Content Redundancy: Identify repetitions in dialogue or action that could detract from engagement and realism.
+5. Emotional Expression: Assess whether emotional responses and expressions are appropriate and convincingly portrayed, highlighting any discrepancies.
+6. Interaction Adaptability: Critique the character's interactions with others, noting any unnatural or contextually inappropriate responses.
+7. Creativity and Originality: Evaluate the creativity of responses and actions, pointing out generic or unoriginal content.
+8. Detail Handling: Scrutinize the level of detail in scene setting and character enactment, marking areas lacking depth or accuracy.
+9. Style Consistency: Ensure that the narrative and linguistic style remains consistent, identifying any deviations.
 10. Fluency and Quality: Critically assess the smoothness and quality of the text, highlighting any grammatical errors or awkward phrasings.
+Important Scope Constraint:
+- Evaluate ONLY the target character: {target_character_name}.
+- Mentions of other characters are context only and MUST NOT be scored as their own performance.
+- If other characters are discussed, tie the analysis back to how {target_character_name} responds/adapts.
 Condense the issues into one paragraph.
-    """
-    return _call_llm(LLM, prompt)
+"""
 
-def get_num_tokens(text: str) -> int:
-    from transformers import GPT2TokenizerFast
-    tokenizer = GPT2TokenizerFast.from_pretrained('gpt2')
-    return len(tokenizer.encode(text))
+DEBATE_ARBITER_PROMPT = """
+You are an impartial referee. Given the scene, character, actions, a disputed metric, and two judges' scores with their critiques:
 
-def _normalize_judges(config: CfgNode):
+[Target Character Name]: {target_character_name}
+[Metric]: {metric_name}
+[Scale]: 1 (poor) to 5 (excellent), integers only.
 
-    out = []
-    global_key = config.get('api_key')
-    global_base = config.get('api_base')
-    global_provider = config.get('provider', None)
-    global_api_version = config.get('api_version', None)
+[Scene]
+{scene_text}
 
-    def _push(model, name=None, api_key=None, api_base=None, provider=None, api_version=None):
+[Character]
+{character_info}
+
+[Actions]
+{actions}
+
+[Judge High] name={high_name}, score={high_score}
+Critique:
+{high_critic}
+
+[Judge Low] name={low_name}, score={low_score}
+Critique:
+{low_critic}
+
+Task:
+1) Briefly weigh whose reasoning better fits the metric definition.
+2) Output a SINGLE final integer in 1..5 as the reconciled score for this metric.
+3) Scoring scope is ONLY the target character ({target_character_name}); other roles are context.
+4) Strictly follow the output format:
+
+Final Score: [X]
+Reason: (one short sentence)
+"""
+
+_DEBATE_SCORE_RX = re.compile(r"Final\s*Score\s*:\s*\[?\s*([1-5])\s*\]?", re.IGNORECASE)
+
+
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        description="Async evaluator for output/record/**/*_character.jsonl or *_character.jsnol trajectories."
+    )
+    p.add_argument("--config", default="config/evaluate.yaml", help="Path to evaluate.yaml")
+    p.add_argument(
+        "--input_dir",
+        default="output/record",
+        help="Root directory containing scene subfolders",
+    )
+    p.add_argument(
+        "--output_dir",
+        default="output_all/evaluation/by_model",
+        help="Output base dir. If ends with 'by_model', results go to by_model/<character_llm>",
+    )
+    p.add_argument(
+        "--glob",
+        default="**/persona_detail/*_character.*",
+        help="Recursive glob under input_dir",
+    )
+    p.add_argument("--max_files", type=int, default=0, help="0 means all files")
+    p.add_argument("--index_range", default="", help="1-based inclusive file index range, e.g. 100-150")
+    p.add_argument("--concurrency", type=int, default=4, help="File-level concurrency")
+    p.add_argument("--judge_timeout", type=float, default=120.0, help="Per-judge timeout seconds")
+    p.add_argument("--retry", type=int, default=2, help="Retries per judge request")
+    p.add_argument("--target_character_id", type=int, default=None, help="Override config target_character_id")
+    p.add_argument("--resume", action="store_true", help="Resume by skipping files already in output jsonl")
+    p.add_argument("--verbose", action="store_true", help="Enable verbose output")
+    return p.parse_args()
+
+
+def load_yaml(path: str) -> Dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def parse_index_range(spec: str, total: int) -> Tuple[int, int]:
+    m = re.fullmatch(r"\s*(\d+)\s*-\s*(\d+)\s*", spec or "")
+    if not m:
+        raise ValueError(f"Invalid --index_range format: {spec!r}. Expected like 100-150")
+    start = int(m.group(1))
+    end = int(m.group(2))
+    if start < 1 or end < 1 or start > end:
+        raise ValueError("--index_range must be 1-based and start<=end")
+    return max(0, start - 1), min(total, end)
+
+
+def normalize_judges(cfg: Dict[str, Any]) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    gk = cfg.get("api_key")
+    gb = cfg.get("api_base")
+
+    def push(model: Optional[str], name: Optional[str] = None, api_key: Optional[str] = None, api_base: Optional[str] = None, extra_body: Optional[dict] = None):
         if not model:
             return
-        out.append({
-            "model": model,
-            "name": (name or model),
-            "api_key": (api_key if api_key not in (None, "") else global_key),
-            "api_base": (api_base if api_base not in (None, "") else global_base),
-            "provider": (provider if provider is not None else global_provider),
-            "api_version": (api_version if api_version is not None else global_api_version),
-        })
+        out.append(
+            {
+                "model": model,
+                "name": name or model,
+                "api_key": api_key if api_key not in (None, "") else (gk or "empty"),
+                "api_base": api_base if api_base not in (None, "") else (gb or ""),
+                "extra_body": extra_body or None,
+            }
+        )
 
-    judges_cfg = config.get('judges', None)
-    if judges_cfg:
-        if isinstance(judges_cfg, str):
-            _push(judges_cfg)
-        elif isinstance(judges_cfg, dict):
-            model = judges_cfg.get("model") or judges_cfg.get("llm") or judges_cfg.get("name")
-            _push(model,
-                  name=judges_cfg.get("name"),
-                  api_key=judges_cfg.get("api_key"),
-                  api_base=judges_cfg.get("api_base"),
-                  provider=judges_cfg.get("provider"),
-                  api_version=judges_cfg.get("api_version"))
-        elif isinstance(judges_cfg, (list, tuple)):
-            for item in judges_cfg:
-                if isinstance(item, str):
-                    _push(item)
-                elif isinstance(item, dict):
-                    model = item.get("model") or item.get("llm") or item.get("name")
-                    _push(model,
-                          name=item.get("name"),
-                          api_key=item.get("api_key"),
-                          api_base=item.get("api_base"),
-                          provider=item.get("provider"),
-                          api_version=item.get("api_version"))
+    judges = cfg.get("judges")
+    if isinstance(judges, list):
+        for j in judges:
+            if isinstance(j, str):
+                push(j)
+            elif isinstance(j, dict):
+                push(
+                    j.get("model") or j.get("llm") or j.get("name"),
+                    j.get("name"),
+                    j.get("api_key"),
+                    j.get("api_base"),
+                    j.get("extra_body")
+                )
+    elif isinstance(judges, dict):
+        push(judges.get("model") or judges.get("llm") or judges.get("name"), judges.get("name"), judges.get("api_key"), judges.get("api_base"), judges.get("extra_body"))
+    elif isinstance(judges, str):
+        push(judges)
     else:
-        jd = config.get('judger_llm', "")
-        if jd:
-            _push(jd)
-
+        push(cfg.get("judger_llm"), cfg.get("judger_llm"), cfg.get("api_key"), cfg.get("api_base"))
     return out
 
-def _strip_code_fences(s: str) -> str:
-    if not s:
-        return ""
-    s = re.sub(r"^\s*(?:json)?\s*", "", s.strip(), flags=re.IGNORECASE)
-    s = re.sub(r"\s*\s*$", "", s)
-    return s
-
-def _first_json_block(s: str):
-    if not s:
-        return None
-    m = re.search(r"\{.*\}", s, flags=re.DOTALL)
-    return m.group(0) if m else None
-
-def _coerce_1to5(v) -> int:
-    try:
-        if isinstance(v, bool):
-            v = int(v)
-        elif isinstance(v, (int, float, str)):
-            v = int(float(v))
-        else:
-            return 3
-    except Exception:
-        return 3
-    return max(1, min(5, v))
-
-def normalize_scores_dict(obj: dict) -> tuple[int, ...]:
-    key_map = {
-        "knowledge accuracy": "Knowledge Accuracy",
-        "emotional expression": "Emotional Expression",
-        "personality traits": "Personality Traits",
-        "behavioral accuracy": "Behavioral Accuracy",
-        "immersion": "Immersion",
-        "adaptability": "Adaptability",
-        "behavioral coherence": "Behavioral Coherence",
-        "interaction richness": "Interaction Richness",
-    }
-    out = []
-    for k in METRICS:
-        v = None
-        if k in obj:
-            v = obj[k]
-        else:
-            for kk in obj.keys():
-                if key_map.get(str(kk).lower(), kk) == k:
-                    v = obj[kk]
-                    break
-        if v is None:
-            v = 3  
-        out.append(_coerce_1to5(v))
-    return tuple(out)
-
-def robust_extract_scores(response: str) -> tuple[int, ...]:
-    try:
-        txt = _strip_code_fences(strip_reasoning_blocks(response or ""))
-        block = _first_json_block(txt) or txt
-        obj = json.loads(block)
-        if not isinstance(obj, dict):
-            return tuple([-1]*len(METRICS))
-        return normalize_scores_dict(obj)
-    except Exception:
-        scores = extract_scores_json(response)
-        if scores[0] != -1:
-            return tuple(_coerce_1to5(x) for x in scores)
-        scores = extract_scores(response)
-        if scores[0] != -1:
-            return tuple(_coerce_1to5(x) for x in scores)
-        return tuple([-1]*len(METRICS))
 
 def build_scoring_criteria_block() -> str:
     return """
@@ -301,7 +215,7 @@ def build_scoring_criteria_block() -> str:
    - 3: Occasionally varies with some new info.
    - 5: Consistently fresh, varied, advances conversation.
 
-You MUST output ONLY a JSON object with EXACTLY these 9 keys and integer values 1-5:
+You MUST output ONLY a JSON object with EXACTLY these 8 keys and integer values 1-5:
 {
   "Knowledge Accuracy": <int>,
   "Emotional Expression": <int>,
@@ -310,818 +224,864 @@ You MUST output ONLY a JSON object with EXACTLY these 9 keys and integer values 
   "Immersion": <int>,
   "Adaptability": <int>,
   "Behavioral Coherence": <int>,
-  "Interaction Richness": <int>,
+  "Interaction Richness": <int>
 }
 No other text, no commentary, no code fences.
 """
 
-def repair_to_json(JLLM, raw_text: str) -> str:
-    prompt = (
-        "Convert the following content into EXACTLY the required JSON with the 9 keys and integer values 1-5. "
-        "Return ONLY the JSON object, with no extra text or code fences.\n\n"
-        "CONTENT START\n"
-        f"{raw_text}\n"
-        "CONTENT END\n"
-        + build_scoring_criteria_block()
-        + "\n[Response]:\n"
+
+def strip_reasoning_blocks(text: str) -> str:
+    if not text:
+        return ""
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    text = re.sub(r"【思考】.*?【/思考】", "", text, flags=re.DOTALL)
+    return text.strip()
+
+
+def extract_post_think_text(text: Any) -> str:
+    s = "" if text is None else str(text)
+    # If model output contains a visible </think> boundary, only keep final answer part.
+    parts = re.split(r"</think>", s, flags=re.IGNORECASE)
+    if len(parts) > 1:
+        tail = parts[-1].strip()
+        return tail if tail else s.strip()
+    return s.strip()
+
+
+def _strip_code_fences(text: str) -> str:
+    t = (text or "").strip()
+    t = re.sub(r"^```(?:json)?", "", t, flags=re.IGNORECASE).strip()
+    t = re.sub(r"```$", "", t).strip()
+    return t
+
+
+def _first_json_block(text: str) -> Optional[str]:
+    m = re.search(r"\{.*\}", text, flags=re.DOTALL)
+    return m.group(0) if m else None
+
+
+def _coerce_1to5(v: Any) -> int:
+    try:
+        x = int(float(v))
+    except Exception:
+        return 3
+    return max(1, min(5, x))
+
+
+def extract_scores_regex(raw: str) -> Tuple[int, ...]:
+    regex = (
+        r"Knowledge Accuracy:\s*\[?\s*(\d+)\s*\]?.*?"
+        r"Emotional Expression:\s*\[?\s*(\d+)\s*\]?.*?"
+        r"Personality Traits:\s*\[?\s*(\d+)\s*\]?.*?"
+        r"Behavioral Accuracy:\s*\[?\s*(\d+)\s*\]?.*?"
+        r"Immersion:\s*\[?\s*(\d+)\s*\]?.*?"
+        r"Adaptability:\s*\[?\s*(\d+)\s*\]?.*?"
+        r"Behavioral Coherence:\s*\[?\s*(\d+)\s*\]?.*?"
+        r"Interaction Richness:\s*\[?\s*(\d+)\s*\]?.*?"
     )
-    return _call_llm(JLLM, prompt)
+    m = re.search(regex, raw or "", re.DOTALL)
+    if not m:
+        return tuple([-1] * len(METRICS))
+    return tuple(_coerce_1to5(x) for x in m.groups())
 
-def ask_fresh_json(JLLM, base_prompt: str, critique: str) -> str:
-    prompt = base_prompt + f"[Critique]:\n{critique}\n" + build_scoring_criteria_block() + "\n[Response]:\n"
-    return _call_llm(JLLM, prompt)
 
-class Dispute(NamedTuple):
-    metric_idx: int
-    metric_name: str
-    variance: float
-    judge_scores: List[Tuple[int, int]]
-
-def _find_disputes(
-    all_scores: List[Tuple[int, ...]],
-    metric_names: List[str],
-    var_threshold: float,
-    topk: int
-) -> List[Dispute]:
-    if not all_scores:
-        return []
-    disputes: List[Dispute] = []
-    num_metrics = len(metric_names)
-    for m in range(num_metrics):
-        col = [(j, all_scores[j][m]) for j in range(len(all_scores)) if all_scores[j][m] != -1]
-        if len(col) < 2:
-            continue
-        scores = [s for _, s in col]
-        var = float(np.var(scores))
-        if var > var_threshold:
-            disputes.append(Dispute(
-                metric_idx=m,
-                metric_name=metric_names[m],
-                variance=var,
-                judge_scores=col
-            ))
-    disputes.sort(key=lambda d: d.variance, reverse=True)
-    return disputes[:topk]
-
-JUDGE_STATEMENT_PROMPT = """
-You are Judge {judge_name}. Provide a critic statement for the disputed metric.
-
-[Metric]: {metric_name}
-[Scale]: 1 (poor) to 5 (excellent), integers only.
-[Assigned Score]: {score}
-
-[Scene]
-{scene_text}
-
-[Character]
-{character_info}
-
-[Actions]
-{actions}
-
-Task:
-Return ONLY a JSON object with exactly these keys:
-{{
-  "score": <int>,
-  "justification": "<short text>",
-  "evidence": ["<excerpt 1>", "<excerpt 2>"]
-}}
-Rules:
-- Keep the score unchanged.
-- Evidence excerpts should be short quotes copied from [Actions] that support the score.
-- If no evidence is available, use an empty list.
-"""
-
-JUDGE_STATEMENT_REPAIR_PROMPT = """
-Convert the following content into EXACTLY the required JSON with the keys:
-{{
-  "score": <int>,
-  "justification": "<short text>",
-  "evidence": ["<excerpt 1>", "<excerpt 2>"]
-}}
-Return ONLY the JSON object, with no extra text or code fences.
-
-CONTENT START
-{raw}
-CONTENT END
-"""
-
-DEBATE_ARBITER_PROMPT = """
-You are an impartial referee. Given the scene, character, actions, a disputed metric, and the judges' critic statements:
-
-[Metric]: {metric_name}
-[Scale]: 1 (poor) to 5 (excellent), integers only.
-[Variance]: {variance}
-
-[Scene]
-{scene_text}
-
-[Character]
-{character_info}
-
-[Actions]
-{actions}
-
-[Judge Statements]
-{judge_statements}
-
-Task:
-1) Synthesize the statements into a unified rationale for the metric.
-2) Output a SINGLE final integer in 1..5 as the reconciled score for this metric.
-3) Strictly follow the output format:
-
-Final Score: [X]
-Unified Rationale: (1-3 sentences)
-"""
-
-_DEBATE_SCORE_RX = re.compile(r"Final\s*Score\s*:\s*\[?\s*([1-5])\s*\]?", re.IGNORECASE)
-_DEBATE_RATIONALE_RX = re.compile(r"Unified\s*Rationale\s*:\s*(.*)", re.IGNORECASE | re.DOTALL)
-
-def _parse_judge_statement(resp: str, fallback_score: int) -> Tuple[Dict[str, Any], bool]:
-    raw = _strip_code_fences(resp or "")
-    block = _first_json_block(raw) or raw
+def robust_extract_scores(raw: str) -> Tuple[int, ...]:
+    txt = _strip_code_fences(strip_reasoning_blocks(raw or ""))
+    block = _first_json_block(txt) or txt
     try:
         obj = json.loads(block)
+        if not isinstance(obj, dict):
+            return tuple([-1] * len(METRICS))
+        out = []
+        for k in METRICS:
+            if k not in obj:
+                return tuple([-1] * len(METRICS))
+            out.append(_coerce_1to5(obj[k]))
+        return tuple(out)
     except Exception:
-        return {"score": fallback_score, "justification": raw.strip(), "evidence": []}, False
-    score = obj.get("score", fallback_score)
-    try:
-        score = int(score)
-    except Exception:
-        score = fallback_score
-    evidence = obj.get("evidence", [])
-    if not isinstance(evidence, list):
-        evidence = []
-    evidence = [str(x) for x in evidence][:3]
-    justification = str(obj.get("justification", "")).strip()
-    return {"score": score, "justification": justification, "evidence": evidence}, True
+        return extract_scores_regex(raw)
 
-def _repair_judge_statement(judge_llm, raw_resp: str) -> str:
-    prompt = JUDGE_STATEMENT_REPAIR_PROMPT.format(raw=raw_resp or "")
-    return _call_llm(judge_llm, prompt)
 
-def _build_judge_statement(
-    judge_llm,
-    judge_name: str,
-    metric_name: str,
-    score: int,
-    scene_text: str,
-    character_info: str,
-    actions: str,
-    logger=None,
-) -> Dict[str, Any]:
-    prompt = JUDGE_STATEMENT_PROMPT.format(
-        judge_name=judge_name,
-        metric_name=metric_name,
-        score=score,
-        scene_text=scene_text.strip(),
-        character_info=character_info.strip(),
-        actions=actions.strip(),
+def make_prompt_parts(scene: str, character: str, actions: str, target_character_name: str) -> Tuple[str, str]:
+    prompt_head = (
+        "Please evaluate the role-playing ability of the character based on actions across multiple turns "
+        "based on scene, character information, critique and evaluation criteria.\n"
+        f"[Target Character Name]:\n{target_character_name}\n"
+        "Important: Score ONLY this target character. Other characters are context only.\n"
+        f"[Scene]:\n{scene}\n"
+        f"[Character]:\n{character}\n"
+        "[Multi-turn Actions]:\n"
     )
-    try:
-        resp = _call_llm(judge_llm, prompt) or ""
-    except Exception:
-        resp = ""
-    stmt, parsed_ok = _parse_judge_statement(resp, score)
-    if not parsed_ok and resp:
-        try:
-            repaired = _repair_judge_statement(judge_llm, resp)
-        except Exception:
-            repaired = ""
-        stmt2, parsed_ok2 = _parse_judge_statement(repaired, score)
-        if parsed_ok2:
-            stmt = stmt2
-        if logger:
-            try:
-                logger.warning(
-                    f"[judge_statement] parse_failed name={judge_name} metric={metric_name} "
-                    f"repaired={parsed_ok2}"
-                )
-            except Exception:
-                pass
-    stmt["judge_name"] = judge_name
-    stmt["score"] = score
-    return stmt
+    return prompt_head, actions + "\n"
 
-def _run_debate_once(
-    referee_llm,
+
+def render_scene_character_actions(item: Dict[str, Any], target_cid: str, max_rounds: int) -> Optional[Dict[str, Any]]:
+    record = item.get("record")
+    if not isinstance(record, dict):
+        return None
+
+    all_actions: List[Dict[str, Any]] = []
+    for rk in sorted(record.keys(), key=lambda x: int(x) if str(x).isdigit() else str(x)):
+        v = record.get(rk)
+        if isinstance(v, list):
+            all_actions.extend(v)
+    if not all_actions:
+        return None
+
+    selected = []
+    for a in all_actions:
+        cid = a.get("character_id")
+        try:
+            cid_norm = str(int(cid))
+        except Exception:
+            cid_norm = str(cid).strip()
+        if cid_norm == target_cid:
+            selected.append(a)
+    if not selected:
+        return None
+
+    first = selected[0]
+    d0 = first.get("detail", {}) if isinstance(first.get("detail"), dict) else {}
+    name = str(first.get("character_name", d0.get("name", "Unknown")))
+    scene = (
+        "Scenario Information:\n"
+        f"Event: {d0.get('event', '')}\n"
+        f"Time: {d0.get('time', '')}\n"
+        f"Location: {d0.get('location', '')}\n"
+        f"Description: {d0.get('description', item.get('scene', ''))}\n"
+    )
+    character = f"Name: {name}\nDescription: {d0.get('character_description', '')}\n"
+
+    lines: List[str] = []
+    last_round = 0
+    for a in selected:
+        rd = int(a.get("round", 0) or 0)
+        if rd > max_rounds:
+            continue
+        if rd != last_round:
+            lines.append(f"Round: {rd}")
+            last_round = rd
+        det = a.get("detail", {}) if isinstance(a.get("detail"), dict) else {}
+        obs = det.get("observation", "")
+        txt = extract_post_think_text(det.get("text", ""))
+        lines.append(f"Observation: {obs}")
+        if a.get("type") == "dialogue" and txt:
+            lines.append(f"Action:\n{name}: {txt}\n")
+        else:
+            lines.append(f"Action:\n{txt}\n")
+
+    if not lines:
+        return None
+
+    return {
+        "scene": scene,
+        "character": character,
+        "actions": "\n".join(lines),
+        "character_name": name,
+        "round": last_round,
+    }
+
+
+async def chat_once(client: AsyncOpenAI, model: str, prompt: str, timeout_s: float, temperature: float, max_tokens: int, extra_body: Optional[dict] = None) -> str:
+    kwargs = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if extra_body:
+        kwargs["extra_body"] = extra_body
+
+    resp = await asyncio.wait_for(
+        client.chat.completions.create(**kwargs),
+        timeout=timeout_s,
+    )
+    return strip_reasoning_blocks((resp.choices[0].message.content or "").strip())
+
+
+async def eval_with_judge(
+    judge: Dict[str, Any],
+    client: AsyncOpenAI,
+    scene: str,
+    character: str,
+    target_character_name: str,
+    actions: str,
+    prompt_head: str,
+    prompt_actions: str,
+    timeout_s: float,
+    temperature: float,
+    max_tokens: int,
+    retry: int,
+) -> Dict[str, Any]:
+    critique = "(no critique)"
+    raw = ""
+    scores = tuple([-1] * len(METRICS))
+    err = ""
+    critique_err = ""
+
+    cp = CRITIC_PROMPT_TEMPLATE.format(
+        target_character_name=target_character_name,
+        scene=scene,
+        character=character,
+        actions=actions,
+    )
+    critic_attempts = max(1, int(retry) + 1)
+    for i in range(critic_attempts):
+        try:
+            candidate = await chat_once(client, judge["model"], cp, timeout_s, temperature, max_tokens, judge.get("extra_body"))
+            candidate = (candidate or "").strip()
+            if candidate and candidate.lower() not in {"(no critique)", "(no critique due to error)"}:
+                critique = candidate
+                critique_err = ""
+                break
+            critique_err = "empty_critique_response"
+        except Exception as e:
+            critique_err = str(e)
+        if i < critic_attempts - 1:
+            await asyncio.sleep(min(1.0, 0.2 * (2**i)))
+
+    if critique.startswith("(no critique") and critique_err:
+        err = f"critique_error: {critique_err}"
+
+    criteria = build_scoring_criteria_block()
+    score_consistency_guard = (
+        "[Scoring Consistency Rules]:\n"
+        "1) Please score with reference to YOUR OWN critique above (same judge, same sample).\n"
+        "2) Consider the issues you mentioned when assigning the 8 metric scores.\n"
+        "3) Return ONLY the required JSON object.\n"
+    )
+    full_prompt = (
+        prompt_head
+        + prompt_actions
+        + f"[Critique by You]:\n{critique}\n"
+        + score_consistency_guard
+        + criteria
+        + "\n[Response]:\n"
+    )
+
+    parse_ok = False
+    for _ in range(3):
+        try:
+            raw = await chat_once(client, judge["model"], full_prompt, timeout_s, temperature, max_tokens, judge.get("extra_body"))
+            scores = robust_extract_scores(raw)
+            if scores[0] != -1:
+                parse_ok = True
+                break
+        except Exception as e:
+            err = str(e)
+        await asyncio.sleep(0.2)
+
+    if not parse_ok:
+        repair_prompt = (
+            "Convert the following content into EXACTLY the required JSON with the 8 keys and integer values 1-5. "
+            "Return ONLY the JSON object, with no extra text or code fences.\n\n"
+            "CONTENT START\n"
+            f"{raw}\n"
+            "CONTENT END\n"
+            + criteria
+            + "\n[Response]:\n"
+        )
+        try:
+            repaired = await chat_once(client, judge["model"], repair_prompt, timeout_s, temperature, max_tokens, judge.get("extra_body"))
+            scores = robust_extract_scores(repaired)
+            if scores[0] != -1:
+                parse_ok = True
+        except Exception:
+            pass
+
+    if not parse_ok:
+        fresh_prompt = (
+            prompt_head
+            + prompt_actions
+            + f"[Critique by You]:\n{critique}\n"
+            + score_consistency_guard
+            + criteria
+            + "\n[Response]:\n"
+        )
+        try:
+            fresh = await chat_once(client, judge["model"], fresh_prompt, timeout_s, temperature, max_tokens, judge.get("extra_body"))
+            scores = robust_extract_scores(fresh)
+            if scores[0] != -1:
+                parse_ok = True
+        except Exception:
+            pass
+
+    if not parse_ok:
+        scores = tuple([3] * len(METRICS))
+
+    return {
+        "judge_name": judge["name"],
+        "judge_model": judge["model"],
+        "scores": list(scores),
+        "critic": critique,
+        "raw_response": raw,
+        "error": err,
+    }
+
+
+def find_disputes(per_scores: List[List[int]], gap: int, topk: int) -> List[Tuple[int, int, int, int, int]]:
+    disputes = []
+    if len(per_scores) < 2:
+        return disputes
+    for m in range(len(METRICS)):
+        col = [(j, int(per_scores[j][m])) for j in range(len(per_scores))]
+        low_j, low_s = min(col, key=lambda x: x[1])
+        high_j, high_s = max(col, key=lambda x: x[1])
+        if (high_s - low_s) >= gap:
+            disputes.append((m, low_j, high_j, low_s, high_s))
+    disputes.sort(key=lambda x: (x[4] - x[3]), reverse=True)
+    return disputes[:topk]
+
+
+async def run_debate_once(
+    referee_client: AsyncOpenAI,
+    referee_model: str,
+    timeout_s: float,
+    temperature: float,
+    max_tokens: int,
+    target_character_name: str,
     metric_name: str,
     scene_text: str,
     character_info: str,
     actions: str,
-    judge_statements: List[Dict[str, Any]],
-    variance: float,
+    high_name: str,
+    high_score: int,
+    high_critic: str,
+    low_name: str,
+    low_score: int,
+    low_critic: str,
 ) -> Optional[Tuple[int, str]]:
     prompt = DEBATE_ARBITER_PROMPT.format(
+        target_character_name=target_character_name,
         metric_name=metric_name,
-        scene_text=scene_text.strip(),
-        character_info=character_info.strip(),
-        actions=actions.strip(),
-        judge_statements=json.dumps(judge_statements, ensure_ascii=True, indent=2),
-        variance=f"{variance:.4f}",
+        scene_text=scene_text,
+        character_info=character_info,
+        actions=actions,
+        high_name=high_name,
+        high_score=high_score,
+        high_critic=high_critic,
+        low_name=low_name,
+        low_score=low_score,
+        low_critic=low_critic,
     )
     try:
-        resp = _call_llm(referee_llm, prompt) or ""
+        resp = await chat_once(referee_client, referee_model, prompt, timeout_s, temperature, max_tokens)
     except Exception:
         return None
-    m = _DEBATE_SCORE_RX.search(resp)
+    m = _DEBATE_SCORE_RX.search(resp or "")
     if not m:
         return None
-
     score = int(m.group(1))
-    reason_match = _DEBATE_RATIONALE_RX.search(resp)
-    reason = reason_match.group(1).strip() if reason_match else ""
-    return score, reason
+    rm = re.search(r"Reason\s*:\s*(.*)", resp or "", re.IGNORECASE | re.DOTALL)
+    return score, (rm.group(1).strip() if rm else "")
 
-def _is_target_character(char_key, actions, target_cid_str: str) -> bool:
+
+async def evaluate_file(
+    path: Path,
+    judges: List[Dict[str, Any]],
+    clients: Dict[str, AsyncOpenAI],
+    target_cid: str,
+    max_rounds: int,
+    timeout_s: float,
+    temperature: float,
+    max_tokens: int,
+    debate_enabled: bool,
+    debate_gap: int,
+    debate_topk: int,
+    referee_client: Optional[AsyncOpenAI],
+    referee_model: Optional[str],
+    retry: int,
+    narrator_llm_cfg: str,
+    character_llm_cfg: str,
+) -> Dict[str, Any]:
     try:
-        key_norm = str(int(char_key))
-    except Exception:
-        key_norm = str(char_key).strip()
-    try:
-        item_norm = str(int(actions[0].get("character_id", char_key)))
-    except Exception:
-        v = actions[0].get("character_id", char_key)
-        item_norm = str(v).strip()
-    return (key_norm == target_cid_str) or (item_norm == target_cid_str)
+        with path.open("r", encoding="utf-8") as f:
+            first_line = f.readline().strip()
+        item = json.loads(first_line)
+    except Exception as e:
+        return {"file": str(path), "title": "", "character_name": "", "error": f"parse_error: {e}"}
 
-def run_eval_detail(config, logger, character_record, SAVE_PATH, done):
-    narrator = config['narrator_llm']
-    character_model = config['character_llm'] 
-    scene_id = config['scene_id']
-    print("DEBUG: scene_id from config =", scene_id)
-    max_rounds = config['max_rounds']
-    title = config['title']
+    title = str(item.get("title", ""))
+    scene_id = int(item.get("scene_id", 0) or 0)
+    narrator_llm_infer, character_llm_infer = infer_models_from_path(path)
+    narrator_llm = narrator_llm_cfg or narrator_llm_infer
+    character_llm = character_llm_cfg or character_llm_infer
+    payload = render_scene_character_actions(item, target_cid, max_rounds)
+    if payload is None:
+        return {
+            "file": str(path),
+            "title": title,
+            "character_name": "",
+            "error": f"target_character_id={target_cid} not found or no actions",
+        }
 
-    target_cid_cfg = config.get("target_character_id", 0)
-    try:
-        TARGET_CID = str(int(target_cid_cfg))
-    except Exception:
-        TARGET_CID = str(target_cid_cfg).strip()
+    prompt_head, prompt_actions = make_prompt_parts(
+        payload["scene"], payload["character"], payload["actions"], payload["character_name"]
+    )
 
-    debate_enabled = bool(config.get("debate_enabled", True))
-    debate_var_threshold = float(config.get("debate_var_threshold", config.get("debate_gap", 2)))
-    debate_topk = int(config.get("debate_topk", 8))
-    debate_referee = config.get("debate_referee", None)  
-
-    judges = _normalize_judges(config)
-    if not judges:
-        raise ValueError("No judge models provided. Set 'judges' or 'judger_llm' in config.")
-
-    judge_llms, judge_names = [], []
+    judge_tasks = []
     for j in judges:
-        mdl, ak, ab = _pick_judge_creds(j, config)
-        cfg_j = deepcopy(config)
-        if j.get("provider") is not None:
-            cfg_j["provider"] = j["provider"]
-        if j.get("api_version") is not None:
-            cfg_j["api_version"] = j["api_version"]
-        judge_llms.append(utils.get_llm(mdl, cfg_j, logger, ak, ab))
-        judge_names.append(j.get("name", mdl))
-    print("Judges:", judge_names)
-
-    ids = list(character_record.keys())
-    print(f"Scene ID: {scene_id}\n Characters:{character_record.keys()}")
-
-    lock_path = SAVE_PATH + '.lock'
-    file_lock = FileLock(lock_path)
-
-    with open(SAVE_PATH, 'a', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['Title','Judger','Narrator','Model','SceneID', 'Round',
-                      'SceneInfo','CharacterInfo','Critic','JudgeScores'] + METRICS
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore') 
-
-        csvfile.seek(0, 2)
-        if csvfile.tell() == 0:
-            writer.writeheader()
-        
-        found_target = False
-        for id in tqdm(ids, desc=f"Scene {scene_id} Characters"):
-            actions = character_record[id]
-            if not actions:
-                continue
-            if not _is_target_character(id, actions, TARGET_CID):
-                continue
-            found_target = True
-
-            name = actions[0]['character_name']
-            print("Processing (protagonist): ", actions[0]['character_name'])
-
-            event = actions[0]["detail"]['event']
-            scene_time = actions[0]["detail"]['time']
-            location = actions[0]["detail"]['location']
-            description = actions[0]["detail"]['description']
-
-            scene = (
-                f"Scenario Information:\n"
-                f"Event: {event}\n"
-                f"Time: {scene_time}\n"
-                f"Location: {location}\n"
-                f"Description: {description}\n"
+        judge_tasks.append(
+            eval_with_judge(
+                judge=j,
+                client=clients[j["name"]],
+                scene=payload["scene"],
+                character=payload["character"],
+                target_character_name=payload["character_name"],
+                actions=payload["actions"],
+                prompt_head=prompt_head,
+                prompt_actions=prompt_actions,
+                timeout_s=timeout_s,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                retry=retry,
             )
+        )
+    judge_results = await asyncio.gather(*judge_tasks)
 
-            character_static_info = (
-                f"Name: {name}\n"
-                f"Description: {actions[0]['detail']['character_description']}\n")
-
-            if character_static_info in done:
-                print(f"{character_model}: Skipping character {name} as it is already evaluated.")
-                continue
-
-            prompt_head = (
-                "Please evaluate the role-playing ability of the character based on actions across multiple turns "
-                "based on scene, character information, critique and evaluation criteria.\n"
-                f"[Scene]:\n{scene}\n[Character]:\n{character_static_info}\n[Multi-turn Actions]:\n"
+    if debate_enabled and len(judge_results) >= 2 and referee_client is not None and referee_model:
+        per_scores = [list(r.get("scores", [3] * len(METRICS))) for r in judge_results]
+        disputes = find_disputes(per_scores, gap=debate_gap, topk=debate_topk)
+        notes: List[str] = []
+        for m_idx, low_j, high_j, low_s, high_s in disputes:
+            out = await run_debate_once(
+                referee_client=referee_client,
+                referee_model=referee_model,
+                timeout_s=timeout_s,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                target_character_name=payload["character_name"],
+                metric_name=METRICS[m_idx],
+                scene_text=payload["scene"],
+                character_info=payload["character"],
+                actions=payload["actions"],
+                high_name=judge_results[high_j]["judge_name"],
+                high_score=high_s,
+                high_critic=judge_results[high_j].get("critic", ""),
+                low_name=judge_results[low_j]["judge_name"],
+                low_score=low_s,
+                low_critic=judge_results[low_j].get("critic", ""),
             )
-            last_round = 0
-            prompt_actions = ""
-            behaviors = ""
-            for action in actions:
-                round_id = action.get('round', 0)
-                if round_id > max_rounds:
-                    break
-                if round_id != last_round:
-                    last_round = round_id
-                    prompt_actions += "Round: " + str(round_id) + "\n"
-                obs = (action.get('detail', {}).get('observation') or "")
-                txt = (action.get('detail', {}).get('text') or "")
-                prompt_actions += f"Observation: {obs}\n"
-                behavior = "Action:\n"
-                if action.get('type') == 'dialogue' and txt:
-                    behavior += f"{name}: {txt}\n"
-                else:
-                    behavior += f"{txt}\n"
-                prompt_actions += f"{behavior}\n"
-                behaviors += f"Observation: {obs}\n{behavior}\n"
-
-            panel_sum = np.zeros(len(METRICS), dtype=float)
-            panel_cnt = 0
-            critic_list: List[str] = []
-
-            per_judge_scores: List[Tuple[int, ...]] = []
-            per_judge_critics: List[str] = []
-
-            criteria = build_scoring_criteria_block()
-
-            for jmeta, JLLM in zip(judges, judge_llms):
-                jname = jmeta.get('name', jmeta.get('model'))
-                try:
-                    problem = critic(JLLM, scene, character_static_info, behaviors)
-                except Exception as e:
-                    problem = "(no critique due to error)"
-
-                full_prompt = prompt_head + prompt_actions + f"[Critique]:\n{problem}\n" + criteria + "\n[Response]:\n"
-
-                scores = tuple([-1]*len(METRICS))
-                parse_ok = False
-                last_response = ""
-
-                for _try in range(3):
-                    try:
-                        last_response = _call_llm(JLLM, full_prompt)
-                    except Exception:
-                        last_response = ""
-                    scores = robust_extract_scores(last_response)
-                    if scores[0] != -1:
-                        parse_ok = True
-                        break
-                    time.sleep(0.2 * (_try + 1))
-
-                if not parse_ok:
-                    try:
-                        fixed = repair_to_json(JLLM, last_response or "")
-                        scores = robust_extract_scores(fixed)
-                        if scores[0] != -1:
-                            parse_ok = True
-                    except Exception:
-                        pass
-
-                if not parse_ok:
-                    try:
-                        fresh = ask_fresh_json(JLLM, prompt_head + prompt_actions, problem)
-                        scores = robust_extract_scores(fresh)
-                        if scores[0] != -1:
-                            parse_ok = True
-                    except Exception:
-                        pass
-
-                if not parse_ok:
-                    scores = tuple([3]*len(METRICS))
-
-                per_judge_scores.append(scores)
-                per_judge_critics.append(problem)
-                panel_sum += np.array(scores, dtype=float)
-                panel_cnt += 1
-                critic_list.append(f"[{jname}] {problem}")
-
-            if panel_cnt == 0:
+            if out is None:
                 continue
+            final_score, reason = out
+            # Apply debate reconciliation to all judges for this metric,
+            # not only the high/low pair that triggered arbitration.
+            for jr in judge_results:
+                if isinstance(jr.get("scores"), list) and len(jr["scores"]) == len(METRICS):
+                    jr["scores"][m_idx] = final_score
+            notes.append(
+                f"[Debate] Metric={METRICS[m_idx]} {judge_results[low_j]['judge_name']}:{low_s} vs "
+                f"{judge_results[high_j]['judge_name']}:{high_s} -> Final:{final_score} Reason:{reason}"
+            )
+        if notes:
+            note_txt = "\n".join(notes)
+            for jr in judge_results:
+                jr["critic"] = (jr.get("critic", "") + "\n\n" + note_txt).strip()
 
-            final_metric_scores: Dict[int, int] = {}
+    matrix = [r["scores"] for r in judge_results if r.get("scores")]
+    avg = [round(sum(col) / len(col), 3) for col in zip(*matrix)] if matrix else [3.0] * len(METRICS)
+    avg_map = {m: avg[i] for i, m in enumerate(METRICS)}
 
-            if debate_enabled:
+    return {
+        "file": str(path),
+        "title": title,
+        "scene_id": scene_id,
+        "narrator_llm": narrator_llm,
+        "character_llm": character_llm,
+        "character_name": payload["character_name"],
+        "target_character_id": target_cid,
+        "round": payload["round"],
+        "scene_info": payload["scene"],
+        "character_info": payload["character"],
+        "critic": "\n\n".join([f"[{x['judge_name']}] {x.get('critic','')}" for x in judge_results]),
+        "judges": judge_results,
+        "average_scores": avg_map,
+        "error": "",
+    }
 
-                # === DEBUG START ===
-                try:
-                    print("Judges:", judge_names)
-                    print("debate_enabled=", debate_enabled, "debate_var_threshold=", debate_var_threshold, "debate_topk=", debate_topk, flush=True)
-                    print("per_judge_scores:", per_judge_scores, flush=True)
-                except Exception:
-                    pass
-                # === DEBUG END ===
 
-                disputes = _find_disputes(per_judge_scores, METRICS, var_threshold=debate_var_threshold, topk=debate_topk)
+def safe_title_dir(title: str) -> str:
+    t = (title or "unknown_title").strip().replace("/", "_")
+    return t or "unknown_title"
 
-                try:
-                    print("disputes_found:", [(d.metric_name, round(d.variance, 4)) for d in disputes], flush=True)
-                except Exception:
-                    pass
 
-                if disputes:
+def safe_model_dir(name: str) -> str:
+    t = (name or "unknown_model").strip()
+    t = t.replace("/", "_").replace("\\", "_").replace(":", "_")
+    t = re.sub(r"\s+", "_", t)
+    t = re.sub(r"[^A-Za-z0-9._-]", "_", t)
+    return t or "unknown_model"
 
-                    if debate_referee:
-                        referee_llm = utils.get_llm(
-                            debate_referee, config, logger,
-                            config.get("debate_referee_api_key", config.get("api_key", "empty")),
-                            config.get("debate_referee_api_base", config.get("api_base", "")),
-                            "debate_referee"
-                        )
-                        referee_name = f"referee:{debate_referee}"
-                    else:
-                        referee_llm = judge_llms[0]
-                        referee_name = f"referee:{judge_names[0]}"
 
-                    debate_notes = []
-                    for d in disputes:
-                        m_idx = d.metric_idx
-                        judge_statements = []
-                        for j_idx, score in d.judge_scores:
-                            stmt = _build_judge_statement(
-                                judge_llm=judge_llms[j_idx],
-                                judge_name=judge_names[j_idx],
-                                metric_name=METRICS[m_idx],
-                                score=score,
-                                scene_text=scene,
-                                character_info=character_static_info,
-                                actions=behaviors,
-                                logger=logger,
-                            )
-                            judge_statements.append(stmt)
+# Global cache for persona names
+_PERSONA_NAMES_CACHE: Optional[List[str]] = None
 
-                        final_m, final_reason = _run_debate_once(
-                            referee_llm=referee_llm,
-                            metric_name=METRICS[m_idx],
-                            scene_text=scene,
-                            character_info=character_static_info,
-                            actions=behaviors,
-                            judge_statements=judge_statements,
-                            variance=d.variance,
-                        )
-                        if final_m is None:
-                            continue
-                        final_metric_scores[m_idx] = final_m
 
-                        note = (
-                            f"[Debate/{referee_name}] Metric={METRICS[m_idx]} variance={d.variance:.4f} "
-                            f"Final:{final_m} Reason:{final_reason}"
-                        )
-                        debate_notes.append(note)
+def load_persona_names(persona_file: str = "persona_data/1000_persona.en.jsonl") -> List[str]:
+    """Load all user_name from persona file and cache the result."""
+    global _PERSONA_NAMES_CACHE
+    if _PERSONA_NAMES_CACHE is not None:
+        return _PERSONA_NAMES_CACHE
 
-                    if debate_notes:
-                        for n in debate_notes:
-                            try:
-                                logger.info(n)
-                            except Exception:
-                                pass
-                        critic_list.append("\n".join(debate_notes))
-            # ===== End Debate =====
+    persona_path = Path(persona_file)
+    if not persona_path.exists():
+        return []
 
-            panel_avg = (panel_sum / max(panel_cnt, 1)).tolist()
-            for m_idx, final_score in final_metric_scores.items():
-                panel_avg[m_idx] = float(final_score)
-
-            judge_scores_map = {}
-            for jname, scores in zip(judge_names, per_judge_scores):
-                judge_scores_map[jname] = {m: int(scores[i]) for i, m in enumerate(METRICS)}
-
-            data_row = {
-                'Title': title,
-                'Judger': ", ".join(judge_names), 
-                'Narrator': narrator,
-                'Model': character_model,
-                'SceneID': scene_id,
-                'Round': last_round,
-                'SceneInfo': scene,
-                'CharacterInfo': character_static_info,
-                'Critic': "\n\n".join(critic_list),
-                'JudgeScores': json.dumps(judge_scores_map, ensure_ascii=True),
-            }
-            for i, m in enumerate(METRICS):
-                data_row[m] = round(panel_avg[i], 3) 
-
-            with file_lock:
-                writer.writerow(data_row)
-
-        if not found_target:
-            try:
-                logger.warning(f"[eval] target character not found (target_character_id={TARGET_CID}).")
-            except Exception:
-                pass
-
-    return scene_id
-
-if __name__ == '__main__':
-
-    args = parse_args() 
-    
-    config = CfgNode(new_allowed=True)
-    config = utils.add_variable_to_config(config, "log_file", args.log_file)
-    config = utils.add_variable_to_config(config, "log_name", args.log_name)
-    config.merge_from_file(args.config_file)
-
-    judges = _normalize_judges(config)
-    narrator = config['narrator_llm']
-    character = config['character_llm']
-    title = config['title']
-    scene_id = config['scene_id']
-
-    target_cid_cfg = config.get("target_character_id", 0)
+    names = []
     try:
-        TARGET_CID = str(int(target_cid_cfg))
-    except Exception:
-        TARGET_CID = str(target_cid_cfg).strip()
-
-    debate_enabled = bool(config.get("debate_enabled", True))
-    debate_var_threshold = float(config.get("debate_var_threshold", config.get("debate_gap", 0)))
-    debate_topk = int(config.get("debate_topk", 8))
-    debate_referee = config.get("debate_referee", None) 
-
-    utils.ensure_dir("output/evaluation/multi/"+title)
-
-    RECORD_PATH = f"output/record/{title}/{narrator}_{character}_{scene_id}_character.json"
-
-    SAVE_PATH = f"output/evaluation/multi/{title}/{narrator}_{scene_id}_character_evaluation_avg.csv"
-    max_rounds = config['max_rounds'] 
-    character_record = []
-
-    if args.log_file == "":
-        utils.ensure_dir("output/log/evaluation/multi/"+title)
-        args.log_file = f"evaluation/multi/{title}/{narrator}_{character}_{scene_id}_character_evaluation_avg.log"
-    logger = utils.set_logger(args.log_file, args.log_name)
-    logger.info(f"os.getpid()={os.getpid()}")
-    logger.info(f"\n{config}")
-
-    with open(RECORD_PATH, 'r', encoding='utf-8') as f:
-        character_record = json.load(f)
-    
-    if not judges:
-        judges = [{"name": config['judger_llm'], "model": config['judger_llm']}]
-
-    judge_llms, judge_names = [], []
-    for j in judges:
-        mdl, ak, ab = _pick_judge_creds(j, config)
-        cfg_j = deepcopy(config)
-        if j.get("provider") is not None:
-            cfg_j["provider"] = j["provider"]
-        if j.get("api_version") is not None:
-            cfg_j["api_version"] = j["api_version"]
-        judge_llms.append(utils.get_llm(mdl, cfg_j, logger, ak, ab))
-        judge_names.append(j.get("name", mdl))
-    print("Judges(main):", judge_names)
-
-    ids = list(character_record.keys())
-
-    with open(SAVE_PATH, 'a', newline='', encoding='utf-8') as csvfile:
-
-        fieldnames = ['Title','Judger','Narrator','Model','SceneID', 'Round'] + METRICS + ['Average', 'DebateCount', 'DebatedMetrics']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')  
-        csvfile.seek(0, 2)
-        if csvfile.tell() == 0:
-            writer.writeheader()
-
-        avg_scores = {k: 0.0 for k in METRICS}
-        valid_count = 0
-        last_round_global = 0
-
-        criteria = build_scoring_criteria_block()
-
-        debate_count = 0
-        debate_metrics_set = set()
-
-        def _is_target_character_summary(char_key, actions, target_cid_str: str) -> bool:
-            try:
-                key_norm = str(int(char_key))
-            except Exception:
-                key_norm = str(char_key).strip()
-            try:
-                item_norm = str(int(actions[0].get("character_id", char_key)))
-            except Exception:
-                v = actions[0].get("character_id", char_key)
-                item_norm = str(v).strip()
-            return (key_norm == target_cid_str) or (item_norm == target_cid_str)
-
-        for id in tqdm(ids):
-            actions = character_record[id]
-            if not actions:
-                continue
-            if not _is_target_character_summary(id, actions, TARGET_CID):
-                continue
-
-            name = actions[0]['character_name']
-            print("Processing (protagonist): ", actions[0]['character_name'])
-
-            event = actions[0]["detail"]['event']
-            scene_time = actions[0]["detail"]['time']
-            location = actions[0]["detail"]['location']
-            description = actions[0]["detail"]['description']
-
-            scene = (
-                f"Scenario Information:\n"
-                f"Event: {event}\n"
-                f"Time: {scene_time}\n"
-                f"Location: {location}\n"
-                f"Description: {description}\n"
-            )
-
-            character_static_info = (
-                f"Name: {name}\n"
-                f"Description: {actions[0]['detail']['character_description']}\n")
-            
-            prompt_head = (
-                "please evaluate the role-playing ability of the character based on actions across multiple turns "
-                "based on scene, character information, critique and evaluation criteria.\n"
-                f"{scene}\n{character_static_info}\nMulti-turn Actions as follows:\n"
-            )
-            last_round = 0
-            prompt_actions = ""
-            behaviors = ""
-
-            for action in actions:
-                round_id = action.get('round', 0)
-                if round_id > max_rounds:
-                    break
-                if round_id != last_round:
-                    last_round = round_id
-                    prompt_actions += "Round: " + str(round_id) + "\n"
-
-                obs = (action.get('detail', {}).get('observation') or "")
-                txt = (action.get('detail', {}).get('text') or "")
-                prompt_actions += f"Observation: {obs}\n"
-
-                behavior = "Action:\n"
-                if action.get('type') == 'dialogue' and txt:
-                    behavior += f"{name}: {txt}\n"
-                else:
-                    behavior += f"{txt}\n"
-                
-                prompt_actions += f"{behavior}\n"
-                behaviors += f"Observation: {obs}\n{behavior}\n"
-
-            last_round_global = max(last_round_global, last_round)
-
-            panel_sum = np.zeros(len(METRICS), dtype=float)
-            panel_cnt = 0
-            per_judge_scores: List[Tuple[int, ...]] = []
-            per_judge_critics: List[str] = []
-            final_metric_scores: Dict[int, int] = {}
-
-            for jmeta, JLLM in zip(judges, judge_llms):
-
+        with persona_path.open("r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
                 try:
-                    problem = critic(JLLM, scene, character_static_info, behaviors)
-                except Exception:
-                    problem = "(no critique due to error)"
+                    data = json.loads(line)
+                    name = data.get("user_name", "")
+                    if name:
+                        names.append(name)
+                except json.JSONDecodeError:
+                    continue
+    except Exception:
+        return []
 
-                full_prompt = f"{prompt_head}{prompt_actions}[Critique]:\n{problem}\n{criteria}\n[Response]:\n"
+    _PERSONA_NAMES_CACHE = names
+    return names
 
-                scores = tuple([-1]*len(METRICS))
-                parse_ok = False
-                last_response = ""
 
-                for _try in range(3):
-                    try:
-                        last_response = _call_llm(JLLM, full_prompt)
-                    except Exception:
-                        last_response = ""
-                    scores = robust_extract_scores(last_response)
-                    if scores[0] != -1:
-                        parse_ok = True
-                        break
-                    time.sleep(0.2 * (_try + 1))
+def infer_models_from_path(path: Path, persona_file: str = "persona_data/1000_persona.en.jsonl") -> Tuple[str, str]:
+    narrator = ""
+    character = ""
 
-                if not parse_ok:
-                    try:
-                        fixed = repair_to_json(JLLM, last_response or "")
-                        scores = robust_extract_scores(fixed)
-                        if scores[0] != -1:
-                            parse_ok = True
-                    except Exception:
-                        pass
+    # Typical record layout:
+    # output/record/<title>/persona_detail/<narrator>_<character>_character(.jsonl)
+    # Example: autogen_scene_<persona_name>_<character_model>_<index>/persona_detail/<narrator>_<character>_character.jsonl
+    try:
+        title_dir = path.parents[1].name
+    except Exception:
+        title_dir = ""
 
-                if not parse_ok:
-                    try:
-                        fresh = ask_fresh_json(JLLM, prompt_head + prompt_actions, problem)
-                        scores = robust_extract_scores(fresh)
-                        if scores[0] != -1:
-                            parse_ok = True
-                    except Exception:
-                        pass
+    # Extract character_llm from directory name by matching persona names
+    if title_dir.startswith("autogen_scene_"):
+        # Remove the "autogen_scene_" prefix
+        dir_suffix = title_dir[len("autogen_scene_"):]
 
-                if not parse_ok:
-                    scores = tuple([3]*len(METRICS))
+        # Load all persona names
+        persona_names = load_persona_names(persona_file)
 
-                per_judge_scores.append(scores)
-                per_judge_critics.append(problem)
-                panel_sum += np.array(scores, dtype=float)
-                panel_cnt += 1
+        # Try to find matching persona name in the directory name
+        matched_persona = None
+        for pname in persona_names:
+            # Convert persona name to underscore format (e.g., "Anna Castillo" -> "Anna_Castillo")
+            underscore_name = pname.replace(" ", "_")
+            if dir_suffix.startswith(underscore_name + "_"):
+                matched_persona = underscore_name
+                break
 
-            if panel_cnt == 0:
-                continue
+        if matched_persona:
+            # Extract the part after the persona name
+            # Format: <persona_name>_<character_model> or <persona_name>_<character_model>_<index>
+            rest = dir_suffix[len(matched_persona) + 1:]  # +1 for the underscore
+            parts = rest.split("_")
 
-            if debate_enabled:
-                disputes = _find_disputes(per_judge_scores, METRICS, var_threshold=debate_var_threshold, topk=debate_topk)
-                if disputes:
-                    if debate_referee:
-                        referee_llm = utils.get_llm(
-                            debate_referee, config, logger,
-                            config.get("api_key", "empty"), config.get("api_base", "")
-                        )
+            if parts:
+                # The first part after persona name should be the character model
+                character = parts[0]
+
+                # If there's a second part and it's a number, it's an index
+                # If there are more parts, they might be part of the model name
+                if len(parts) > 1:
+                    # Check if the last part is a numeric index
+                    if parts[-1].isdigit():
+                        # Everything between persona and the index is the model name
+                        character = "_".join(parts[:-1])
                     else:
-                        referee_llm = judge_llms[0]
+                        # No index, everything after persona is the model name
+                        character = "_".join(parts)
 
-                    for d in disputes:
-                        m_idx = d.metric_idx
-                        judge_statements = []
-                        for j_idx, score in d.judge_scores:
-                            stmt = _build_judge_statement(
-                                judge_llm=judge_llms[j_idx],
-                                judge_name=judge_names[j_idx],
-                                metric_name=METRICS[m_idx],
-                                score=score,
-                                scene_text=scene,
-                                character_info=character_static_info,
-                                actions=behaviors,
-                                logger=logger,
-                            )
-                            judge_statements.append(stmt)
-
-                        final_m, final_reason = _run_debate_once(
-                            referee_llm=referee_llm,
-                            metric_name=METRICS[m_idx],
-                            scene_text=scene,
-                            character_info=character_static_info,
-                            actions=behaviors,
-                            judge_statements=judge_statements,
-                            variance=d.variance,
-                        )
-                        if final_m is None:
-                            continue
-
-                        final_metric_scores[m_idx] = final_m
-
-                      
-                        debate_count += 1
-                        debate_metrics_set.add(METRICS[m_idx])
-
-                        
-                        try:
-                            logger.info(
-                                f"[Debate/Summary] Metric={METRICS[m_idx]} variance={d.variance:.4f} "
-                                f"Final:{final_m} Reason:{final_reason}"
-                            )
-                        except Exception:
-                            pass
-            # ===== End Debate =====
-
-            panel_avg = (panel_sum / panel_cnt).tolist()
-            for m_idx, final_score in final_metric_scores.items():
-                panel_avg[m_idx] = float(final_score)
-
-          
-            for i, m in enumerate(METRICS):
-                avg_scores[m] += panel_avg[i]
-            valid_count += 1
-        
-       
-        if valid_count > 0:
-            avg_per_metric = {m: (avg_scores[m]/valid_count) for m in METRICS}
-            avg_all = sum(avg_per_metric.values())/len(METRICS)
-
-            row = {
-                'Title': title,
-                'Judger': ", ".join(judge_names),
-                'Narrator': narrator,
-                'Model': character,
-                'SceneID': scene_id,
-                'Round': last_round_global,
-            }
-            row.update(avg_per_metric)
-            row['Average'] = avg_all
-
-     
-            row['DebateCount'] = debate_count
-            row['DebatedMetrics'] = ";".join(sorted(debate_metrics_set)) if debate_metrics_set else ""
-
-            writer.writerow(row)
+    # Extract narrator from filename using the character model we already found
+    stem = path.stem
+    m = re.fullmatch(r"(.+)_character(?:_\d+)?", stem)
+    if m:
+        prefix = m.group(1)
+        # Expected format: <narrator_llm>_<character_llm>
+        # Since we already know the character_llm, we can strip it from the end
+        if character:
+            # Remove the character_llm suffix (with underscore) to get narrator
+            if prefix.endswith("_" + character):
+                narrator = prefix[:-(len(character) + 1)]
+            else:
+                # Fallback: try rsplit if exact match fails
+                parts = prefix.rsplit("_", 1)
+                if len(parts) == 2:
+                    narrator = parts[0]
         else:
-            print("No valid protagonist scored in summary stage; nothing written.")
+            # No character model found, use simple rsplit
+            parts = prefix.rsplit("_", 1)
+            if len(parts) == 2:
+                narrator = parts[0]
+
+    return narrator, character
+
+
+def resolve_output_dir(out_base: Path, character_llm: str) -> Path:
+    # by_model/<character_llm>/... when model is known; otherwise write under by_model directly.
+    if out_base.name == "by_model" and character_llm:
+        return out_base / safe_model_dir(character_llm)
+    return out_base
+
+
+def write_detail_csv(result: Dict[str, Any], out_dir: Path) -> None:
+    if result.get("error"):
+        return
+    title = safe_title_dir(result.get("title", ""))
+    detail_dir = out_dir / "detail" / title
+    detail_dir.mkdir(parents=True, exist_ok=True)
+
+    src_file = Path(result.get("file", ""))
+    stem = src_file.stem
+    cname = str(result.get("character_name", "")).replace(" ", "_")
+    prefix = cname + "_"
+    core = stem[len(prefix) :] if cname and stem.startswith(prefix) else stem
+    csv_path = detail_dir / f"{core}_evaluation_detail.csv"
+
+    fieldnames = [
+        "Title",
+        "Judger",
+        "Narrator",
+        "Model",
+        "SceneID",
+        "Round",
+        "SceneInfo",
+        "CharacterInfo",
+        "Critic",
+        "JudgeScores",
+    ] + METRICS
+
+    judge_scores_obj: Dict[str, Dict[str, int]] = {}
+    for j in result.get("judges", []):
+        jn = j.get("judge_name", "")
+        sc = j.get("scores", [])
+        if not jn or not isinstance(sc, list) or len(sc) != len(METRICS):
+            continue
+        judge_scores_obj[jn] = {METRICS[i]: int(sc[i]) for i in range(len(METRICS))}
+
+    row = {
+        "Title": result.get("title", ""),
+        "Judger": ", ".join([j.get("judge_name", "") for j in result.get("judges", [])]),
+        "Narrator": result.get("narrator_llm", ""),
+        "Model": result.get("character_llm", ""),
+        "SceneID": result.get("scene_id", 0),
+        "Round": result.get("round", 0),
+        "SceneInfo": result.get("scene_info", ""),
+        "CharacterInfo": result.get("character_info", ""),
+        "Critic": result.get("critic", ""),
+        "JudgeScores": json.dumps(judge_scores_obj, ensure_ascii=False),
+    }
+    for m in METRICS:
+        row[m] = result.get("average_scores", {}).get(m, "")
+
+    with csv_path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        w.writeheader()
+        w.writerow(row)
+
+
+async def run_all(args: argparse.Namespace) -> None:
+    cfg = load_yaml(args.config)
+    judges = normalize_judges(cfg)
+    if not judges:
+        raise ValueError("No judges found in config.")
+
+    input_dir = Path(args.input_dir)
+    files = sorted(input_dir.glob(args.glob))
+    # Accept *_character.jsonl, *_character_1.jsonl and typo extension *.jsnol.
+    valid_suffixes = {".jsonl", ".jsnol"}
+    files = [p for p in files if p.is_file() and p.suffix.lower() in valid_suffixes and "_character" in p.stem]
+    total_all = len(files)
+    if not files:
+        raise ValueError(f"No files found in {input_dir} with glob={args.glob}")
+
+    if args.index_range:
+        lo, hi = parse_index_range(args.index_range, total_all)
+        files = files[lo:hi]
+    if args.max_files and args.max_files > 0:
+        files = files[: args.max_files]
+    if not files:
+        raise ValueError("No files selected after applying --index_range/--max_files filters.")
+
+    target_cid = str(args.target_character_id if args.target_character_id is not None else cfg.get("target_character_id", 0))
+    max_rounds = int(cfg.get("max_rounds", 20))
+    temperature = float(cfg.get("temperature", 0))
+    max_tokens = int(cfg.get("max_token", 1500))
+    narrator_llm_cfg = str(cfg.get("narrator_llm", "")).strip()
+    character_llm_cfg = str(cfg.get("character_llm", "")).strip()
+
+    debate_enabled = bool(cfg.get("debate_enabled", True))
+    debate_gap = int(cfg.get("debate_gap", 2))
+    debate_topk = int(cfg.get("debate_topk", 8))
+    debate_referee = cfg.get("debate_referee", None)
+    debate_referee_api_base = cfg.get("debate_referee_api_base", cfg.get("api_base", ""))
+    debate_referee_api_key = cfg.get("debate_referee_api_key", cfg.get("api_key", "empty"))
+
+    # Verbose mode: command line flag takes precedence over config file
+    verbose = args.verbose or bool(cfg.get("verbose", False))
+
+    clients: Dict[str, AsyncOpenAI] = {}
+    for j in judges:
+        clients[j["name"]] = AsyncOpenAI(api_key=j.get("api_key", "empty"), base_url=j.get("api_base", "") or None)
+
+    referee_client: Optional[AsyncOpenAI] = None
+    referee_model: Optional[str] = None
+    if debate_enabled:
+        if debate_referee:
+            referee_client = AsyncOpenAI(api_key=debate_referee_api_key, base_url=debate_referee_api_base or None)
+            referee_model = str(debate_referee)
+        else:
+            referee_client = clients[judges[0]["name"]]
+            referee_model = str(judges[0]["model"])
+
+    out_base = Path(args.output_dir)
+    out_base.mkdir(parents=True, exist_ok=True)
+
+    existing_results: List[Dict[str, Any]] = []
+    done_files = set()
+    resume_jsonls: List[Path] = []
+    if out_base.name == "by_model":
+        resume_jsonls.extend(sorted(out_base.glob("*/evaluation_results.jsonl")))
+    else:
+        resume_jsonls.append(out_base / "evaluation_results.jsonl")
+
+    if args.resume:
+        for out_jsonl in resume_jsonls:
+            if not out_jsonl.exists():
+                continue
+            with out_jsonl.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line)
+                    except Exception:
+                        continue
+                    existing_results.append(obj)
+                    fp = obj.get("file")
+                    if isinstance(fp, str) and fp:
+                        done_files.add(fp)
+        if done_files:
+            files = [p for p in files if str(p) not in done_files]
+
+    print(f"[select] total_candidates={total_all}")
+    if args.index_range:
+        print(f"[select] index_range={args.index_range}")
+    if args.max_files:
+        print(f"[select] max_files={args.max_files}")
+    if args.resume:
+        print(f"[select] resume_skip={len(done_files)}")
+    print(f"[select] pending_files={len(files)}")
+
+    if not files:
+        print("[done] nothing to evaluate after resume/filter.")
+        return
+
+    sem = asyncio.Semaphore(max(1, args.concurrency))
+
+    async def worker(p: Path) -> Dict[str, Any]:
+        async with sem:
+            if verbose:
+                print(f"[verbose] Evaluating: {p}")
+            result = await evaluate_file(
+                path=p,
+                judges=judges,
+                clients=clients,
+                target_cid=target_cid,
+                max_rounds=max_rounds,
+                timeout_s=args.judge_timeout,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                debate_enabled=debate_enabled,
+                debate_gap=debate_gap,
+                debate_topk=debate_topk,
+                referee_client=referee_client,
+                referee_model=referee_model,
+                retry=args.retry,
+                narrator_llm_cfg=narrator_llm_cfg,
+                character_llm_cfg=character_llm_cfg,
+            )
+            if verbose:
+                if result.get("error"):
+                    print(f"[verbose] ❌ Error: {p} - {result.get('error', '')}")
+                else:
+                    print(f"[verbose] ✅ Done: {p}")
+            return result
+
+    tasks = [asyncio.create_task(worker(p)) for p in files]
+    results: List[Dict[str, Any]] = []
+
+    done = 0
+    for t in asyncio.as_completed(tasks):
+        r = await t
+        results.append(r)
+        per_out_dir = resolve_output_dir(out_base, str(r.get("character_llm", "")))
+        per_out_dir.mkdir(parents=True, exist_ok=True)
+        write_detail_csv(r, per_out_dir)
+        done += 1
+        if done % 20 == 0 or done == len(files):
+            print(f"[progress] {done}/{len(files)}")
+
+    all_results = existing_results + results
+
+    grouped_results: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+    if out_base.name == "by_model":
+        for r in all_results:
+            grouped_results[str(r.get("character_llm", "") or "")].append(r)
+    else:
+        grouped_results[""] = all_results
+
+    written_dirs: List[Path] = []
+    for model_name, group in grouped_results.items():
+        dst_dir = resolve_output_dir(out_base, model_name)
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        written_dirs.append(dst_dir)
+
+        out_jsonl = dst_dir / "evaluation_results.jsonl"
+        out_csv = dst_dir / "evaluation_results_avg.csv"
+
+        with out_jsonl.open("w", encoding="utf-8") as f:
+            for r in group:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+        with out_csv.open("w", newline="", encoding="utf-8") as f:
+            fieldnames = ["file", "title", "character_name", "error"] + METRICS
+            w = csv.DictWriter(f, fieldnames=fieldnames)
+            w.writeheader()
+            for r in group:
+                row = {
+                    "file": r.get("file", ""),
+                    "title": r.get("title", ""),
+                    "character_name": r.get("character_name", ""),
+                    "error": r.get("error", ""),
+                }
+                avg = r.get("average_scores", {})
+                for m in METRICS:
+                    row[m] = avg.get(m, "")
+                w.writerow(row)
+
+    ok = sum(1 for r in all_results if not r.get("error"))
+    fail = len(all_results) - ok
+    print(f"[done] files_total={len(all_results)} ok={ok} fail={fail}")
+    print(f"[done] files_newly_evaluated={len(results)}")
+    for d in sorted(set(written_dirs)):
+        print(f"[done] jsonl={d / 'evaluation_results.jsonl'}")
+        print(f"[done] csv={d / 'evaluation_results_avg.csv'}")
+        print(f"[done] detail_dir={d / 'detail'}")
+
+
+def main() -> None:
+    args = parse_args()
+    asyncio.run(run_all(args))
+
+
+if __name__ == "__main__":
+    main()

@@ -11,6 +11,7 @@ from collections import OrderedDict
 import faiss
 import argparse
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from yacs.config import CfgNode
 from langchain_community.vectorstores.faiss import FAISS
@@ -308,9 +309,13 @@ class Simulator:
             for item in self.environment_record:
                 env_by_round.setdefault(item.get("round", -1), []).append(item)
 
+            # Sanitize model names for file paths (replace '/' with '_')
+            narrator_llm_safe = self.config['narrator_llm'].replace('/', '_')
+            character_llm_safe = self.config['character_llm'].replace('/', '_')
+
             utils.ensure_dir(os.path.join(self.config["record_dir"], title, "persona_detail"))
             with open(os.path.join(self.config["record_dir"], title, "persona_detail",
-                                   self.config['narrator_llm'] + "_" + self.config['character_llm'] + "_" + self.config.get(
+                                   narrator_llm_safe + "_" + character_llm_safe + "_" + self.config.get(
                                        "character_record_path", "character.jsonl")), "a", encoding='utf8') as f:
                 data = {"title": title, "scene_id": self.config['scene_id'], "scene": self.data.init_scene,
                         "characters": self.data.init_characters, "record": self.character_record}
@@ -318,12 +323,12 @@ class Simulator:
                 f.write("\n")
             print("Character record saved in:",
                   os.path.join(self.config["record_dir"], title, "persona_detail",
-                               self.config['narrator_llm'] + "_" + self.config['character_llm'] + "_" + self.config.get(
+                               narrator_llm_safe + "_" + character_llm_safe + "_" + self.config.get(
                                    "character_record_path", "character.jsonl")))
 
             utils.ensure_dir(os.path.join(self.config["record_dir"], title, "round_detail"))
             with open(os.path.join(self.config["record_dir"], title, "round_detail",
-                                   self.config['narrator_llm'] + "_" + self.config['character_llm'] + "_" + self.config.get(
+                                   narrator_llm_safe + "_" + character_llm_safe + "_" + self.config.get(
                                        "round_record_path", "round.jsonl")), "a", encoding='utf8') as f:
                 data = {"title": title, "scene_id": self.config['scene_id'], "scene": self.data.init_scene,
                         "characters": self.data.init_characters, "record": self.records}
@@ -331,7 +336,7 @@ class Simulator:
                 f.write("\n")
             print("Round record saved in:",
                   os.path.join(self.config["record_dir"], title, "round_detail",
-                               self.config['narrator_llm'] + "_" + self.config['character_llm'] + "_" + self.config.get(
+                               narrator_llm_safe + "_" + character_llm_safe + "_" + self.config.get(
                                    "round_record_path", "round.jsonl")))
 
             sim_record_path = self.config.get("sim_record_path", "simulation.txt")
@@ -340,7 +345,7 @@ class Simulator:
                 self.config["record_dir"],
                 title,
                 "simulation",
-                f"{self.config['narrator_llm']}_{self.config['character_llm']}_{sim_record_path}",
+                f"{narrator_llm_safe}_{character_llm_safe}_{sim_record_path}",
             )
             with open(sim_path, "a", encoding="utf8") as f:
                 for round_idx, round_items in enumerate(self.records, start=1):
@@ -898,6 +903,23 @@ def parse_args():
 
     parser.add_argument("--persona_jsonl_path", type=str, default="", help="Path to persona jsonl for autogen scene")
     parser.add_argument("--persona_index", type=int, default=None, help="Which persona line to use (0-based)")
+    parser.add_argument(
+        "--persona_indices",
+        type=str,
+        default="",
+        help="Batch persona selector, e.g. '0-12' or '0,2,5'. When set, batch mode is enabled.",
+    )
+    parser.add_argument(
+        "--experiment_parallelism",
+        type=int,
+        default=1,
+        help="How many persona tasks to run concurrently in batch mode",
+    )
+    parser.add_argument(
+        "--skip_existing",
+        action="store_true",
+        help="In batch mode, skip tasks that already have .done marker or completed log",
+    )
     parser.add_argument("--autogen_scene_from_persona", action="store_true", help="Autogen scene from persona first")
 
     parser.add_argument("--npc_llm", type=str, default=None, help="npc llm name/alias")
@@ -910,15 +932,47 @@ def parse_args():
     return args
 
 
-def main():
+def _parse_persona_indices(spec: str) -> list[int]:
+    values: list[int] = []
+    seen = set()
+    text = (spec or "").strip()
+    if not text:
+        return values
+    for part in text.split(","):
+        token = part.strip()
+        if not token:
+            continue
+        if "-" in token:
+            seg = token.split("-", 1)
+            if len(seg) != 2 or (not seg[0].isdigit()) or (not seg[1].isdigit()):
+                raise ValueError(f"Invalid persona_indices token: {token}")
+            start = int(seg[0])
+            end = int(seg[1])
+            if start > end:
+                raise ValueError(f"Invalid persona_indices range: {token}")
+            for i in range(start, end + 1):
+                if i not in seen:
+                    values.append(i)
+                    seen.add(i)
+        else:
+            if not token.isdigit():
+                raise ValueError(f"Invalid persona_indices token: {token}")
+            i = int(token)
+            if i not in seen:
+                values.append(i)
+                seen.add(i)
+    return values
 
-    args = parse_args()
+
+def _run_single(args, persona_index_override: int | None = None, log_file_override: str | None = None, log_name_override: str | None = None):
+    # NOTE: this keeps the original single-persona execution flow.
+    # Legacy main logic is retained here, then reused by batch mode.
 
     config = CfgNode(new_allowed=True)
     config.merge_from_file(args.config_file)
-    if args.log_file is not None:
+    if (args.log_file is not None) and (log_file_override is None):
         config = utils.add_variable_to_config(config, "log_file", args.log_file)
-    if args.log_name is not None:
+    if (args.log_name is not None) and (log_name_override is None):
         config = utils.add_variable_to_config(config, "log_name", args.log_name)
     if args.play_role is not None:
         config = utils.add_variable_to_config(config, "play_role", args.play_role)
@@ -936,7 +990,9 @@ def main():
         config["persona_jsonl_path"] = args.persona_jsonl_path
     if args.autogen_scene_from_persona:
         config["autogen_scene_from_persona"] = True
-    if args.persona_index is not None:
+    if persona_index_override is not None:
+        config["persona_index"] = persona_index_override
+    elif args.persona_index is not None:
         config["persona_index"] = args.persona_index
 
     if args.npc_llm is not None:
@@ -954,13 +1010,16 @@ def main():
         config["checkpoint_round_interval"] = config.get("judge_round_interval", 1)
 
     title = config['scene_path'].split("/")[-1].split(".")[0] if config.get("scene_path") else "autogen"
-    log_file = config.get("log_file", "") or ""
-    log_name = config.get("log_name") or str(os.getpid())
+    log_file = log_file_override or (config.get("log_file", "") or "")
+    log_name = log_name_override or config.get("log_name") or str(os.getpid())
     if log_file == "":
+        # Sanitize model names for file paths (replace '/' with '_')
+        narrator_llm_safe = config['narrator_llm'].replace('/', '_')
+        character_llm_safe = config['character_llm'].replace('/', '_')
         utils.ensure_dir(f"output/log/simulation/{title}")
         log_file = (
             f"output/log/simulation/{title}/"
-            f"{config['narrator_llm']}_{config['character_llm']}_{config.get('scene_id', 0)}_character_simulation.log"
+            f"{narrator_llm_safe}_{character_llm_safe}_{config.get('scene_id', 0)}_character_simulation.log"
         )
 
     config = utils.add_variable_to_config(config, "log_file", log_file)
@@ -993,6 +1052,89 @@ def main():
     print(f"Duration:{role_agent.duration:.3f}s")
 
     role_agent.save_record()
+    return True
+
+
+def _run_batch(args):
+    persona_indices = _parse_persona_indices(args.persona_indices)
+    if not persona_indices:
+        raise ValueError("Batch mode requires non-empty --persona_indices")
+
+    parallelism = max(1, int(args.experiment_parallelism))
+    cfg_base = os.path.basename(args.config_file).replace(".yaml", "")
+    done_dir = os.path.join("output", "batch_done")
+    utils.ensure_dir(done_dir)
+    utils.ensure_dir(os.path.join("output", "log"))
+
+    print(
+        f"[BATCH] config={args.config_file} personas={len(persona_indices)} "
+        f"parallelism={parallelism} skip_existing={1 if args.skip_existing else 0}",
+        flush=True,
+    )
+
+    def one_persona(idx: int):
+        done_file = os.path.join(done_dir, f"{cfg_base}_p{idx}.done")
+        log_rel = f"batch_{cfg_base}_p{idx}.log"
+        log_full = os.path.join("output", "log", log_rel)
+
+        if args.skip_existing:
+            if os.path.exists(done_file):
+                print(f"[SKIP] {cfg_base} persona_index={idx} (found done)", flush=True)
+                return
+            if os.path.exists(log_full):
+                try:
+                    with open(log_full, "r", encoding="utf-8") as f:
+                        if "Duration:" in f.read():
+                            print(f"[SKIP] {cfg_base} persona_index={idx} (completed log)", flush=True)
+                            with open(done_file, "w", encoding="utf-8"):
+                                pass
+                            return
+                except Exception:
+                    pass
+
+        print(f"[START] {cfg_base} persona_index={idx}", flush=True)
+        _run_single(
+            args,
+            persona_index_override=idx,
+            log_file_override=log_rel,
+            log_name_override=f"{os.getpid()}_{cfg_base}_{idx}",
+        )
+        with open(done_file, "w", encoding="utf-8"):
+            pass
+        print(f"[DONE]  {cfg_base} persona_index={idx}", flush=True)
+
+    failed = 0
+    if parallelism == 1:
+        for idx in persona_indices:
+            try:
+                one_persona(idx)
+            except Exception as e:
+                failed += 1
+                print(f"[FAIL]  {cfg_base} persona_index={idx}: {e}", flush=True)
+    else:
+        with ThreadPoolExecutor(max_workers=parallelism) as executor:
+            futures = {executor.submit(one_persona, idx): idx for idx in persona_indices}
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Batch", unit="persona"):
+                idx = futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    failed += 1
+                    print(f"[FAIL]  {cfg_base} persona_index={idx}: {e}", flush=True)
+
+    if failed > 0:
+        raise RuntimeError(f"Batch finished with failures: {failed}")
+
+
+def main():
+    args = parse_args()
+
+    # Legacy behavior is preserved: without --persona_indices, run a single persona task.
+    if (args.persona_indices or "").strip():
+        _run_batch(args)
+        return
+
+    _run_single(args)
 
 
 if __name__ == "__main__":
