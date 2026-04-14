@@ -1,20 +1,10 @@
 # Use the model identifier exposed by your endpoint, e.g. local `qwen3-32b` or paid API model `gpt-4o`
 judger_llm: xxx  # Fallback judge model when no multi-judge panel is specified
-# Must match the narrator model name used during simulation
-narrator_llm: xxx
-# Must match the character model name used during simulation
-character_llm: xxx
-# Experiment/run title (must match simulation record folder naming)
-title: xxx
-# Evaluate only this scene id (set according to your records)
-scene_id: 0
 # ===== LLM generation settings =====
 # Sampling temperature for judge/referee calls
 temperature: 0
 # Max tokens per model response
 max_token: 1500
-# Retry attempts on API failure
-max_retries: 1
 # Print verbose evaluation logs
 verbose: True
 
@@ -46,12 +36,10 @@ judges:
 target_character_id: 0
 # Enable debate/arbitration when judge scores disagree
 debate_enabled: true
-# Variance threshold (tau) to trigger arbitration
-debate_var_threshold: 1
 # Minimum score gap to trigger debate flow
 debate_gap: 2
 # Number of candidate items/issues to send into debate
-debate_topk: 8
+debate_topk: 3
 
 # Referee model identifier for arbitration
 debate_referee: "xxx"
@@ -62,7 +50,5 @@ debate_referee_provider: "openai"
 # debate_referee_api_version: "xxx"
 
 # ===== Evaluation scope limits =====
-# Max debate rounds per item
-max_rounds: 5
-# Max number of scenes to evaluate in one run
-max_scenes: 1
+# Maximum rounds of character actions to evaluate
+max_rounds: 10
