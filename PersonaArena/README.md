@@ -365,7 +365,7 @@ Metrics (8 dimensions):
 
 8. Interaction richness
 
-### Results Table (see the final CSV file) (`output_all/evaluation/by_model/<character_llm>/evaluation_results_avg.csv`)
+### Results Table (see the final CSV file) (`output/evaluation/by_model/<character_llm>/evaluation_results_avg.csv`)
 
 ```table
 | file | title | character_name | error | Knowledge Accuracy | Emotional Expression | Personality Traits | Behavioral Accuracy | Immersion | Adaptability | Behavioral Coherence | Interaction Richness |
