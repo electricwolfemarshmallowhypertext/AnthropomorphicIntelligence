@@ -301,6 +301,22 @@ class Simulator:
         idx = text.find(name)
         return idx if idx != -1 else None
 
+    @staticmethod
+    def _safe_filename_token(value: str) -> str:
+        """
+        Sanitize a string for safe use in file paths.
+        Keeps only alphanumeric characters, dots, hyphens, and underscores.
+        Replaces all other characters with underscores.
+
+        Args:
+            value: The string to sanitize
+
+        Returns:
+            A safe filename token with special characters replaced by '_'
+        """
+        import re
+        return re.sub(r"[^A-Za-z0-9._-]+", "_", str(value)).strip("_") or "unknown"
+
     def save_record(self):
         title = self.config['scene_path'].split("/")[-1].split(".")[0]
 
@@ -309,9 +325,9 @@ class Simulator:
             for item in self.environment_record:
                 env_by_round.setdefault(item.get("round", -1), []).append(item)
 
-            # Sanitize model names for file paths (replace '/' with '_')
-            narrator_llm_safe = self.config['narrator_llm'].replace('/', '_')
-            character_llm_safe = self.config['character_llm'].replace('/', '_')
+            # Sanitize model names for file paths
+            narrator_llm_safe = self._safe_filename_token(self.config.get('narrator_llm', 'unknown_narrator'))
+            character_llm_safe = self._safe_filename_token(self.config.get('character_llm', 'unknown_character'))
 
             utils.ensure_dir(os.path.join(self.config["record_dir"], title, "persona_detail"))
             with open(os.path.join(self.config["record_dir"], title, "persona_detail",
@@ -1013,9 +1029,13 @@ def _run_single(args, persona_index_override: int | None = None, log_file_overri
     log_file = log_file_override or (config.get("log_file", "") or "")
     log_name = log_name_override or config.get("log_name") or str(os.getpid())
     if log_file == "":
-        # Sanitize model names for file paths (replace '/' with '_')
-        narrator_llm_safe = config['narrator_llm'].replace('/', '_')
-        character_llm_safe = config['character_llm'].replace('/', '_')
+        # Sanitize model names for file paths
+        def _safe_filename_token(value: str) -> str:
+            """Sanitize a string for safe use in file paths."""
+            return re.sub(r"[^A-Za-z0-9._-]+", "_", str(value)).strip("_") or "unknown"
+
+        narrator_llm_safe = _safe_filename_token(config.get('narrator_llm', 'unknown_narrator'))
+        character_llm_safe = _safe_filename_token(config.get('character_llm', 'unknown_character'))
         utils.ensure_dir(f"output/log/simulation/{title}")
         log_file = (
             f"output/log/simulation/{title}/"
