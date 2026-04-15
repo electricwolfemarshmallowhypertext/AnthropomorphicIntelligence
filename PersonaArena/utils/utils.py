@@ -170,6 +170,44 @@ def get_llm(model, config, logger, api_key=None, api_base=None, role: str | None
             max_retries=config["max_retries"],
             model_kwargs=model_kwargs,
         )
+    elif provider == "azure-entraID":
+        ## add support for azure entra ID-based Authentication of Azure OpenAI Client 
+        from langchain_openai import AzureChatOpenAI 
+        from azure.identity import  AzureCliCredential,get_bearer_token_provider 
+        
+        credential = AzureCliCredential()
+        token_provider = get_bearer_token_provider(credential, "https://cognitiveservices.azure.com/.default")
+
+        if model.startswith("gpt"):
+            
+            LLM = AzureChatOpenAI(
+                azure_endpoint=api_base,
+                openai_api_version=api_version,
+                deployment_name=model,
+                azure_ad_token_provider=token_provider,
+                temperature=config["temperature"],
+                model_kwargs={"max_completion_tokens": config["max_token"]},
+            )   
+        else:
+            LLM = AzureChatOpenAI(
+                azure_endpoint=api_base,
+                azure_ad_token_provider=token_provider,
+                openai_api_version=api_version,
+                deployment_name=model,
+                temperature=config["temperature"],
+                timeout=300,
+                max_tokens=config["max_token"],
+                default_headers={
+                    "X-Stainless-Lang": "",
+                    "X-Stainless-Package-Version": "",
+                    "X-Stainless-OS": "",
+                    "X-Stainless-Arch": "",
+                    "X-Stainless-Runtime": "",
+                    "X-Stainless-Runtime-Version": "",
+                },
+                max_retries=config["max_retries"],
+            )
+ 
     else:
         from langchain_openai import ChatOpenAI
         LLM = ChatOpenAI(

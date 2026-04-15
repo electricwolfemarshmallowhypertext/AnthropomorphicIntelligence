@@ -2,52 +2,85 @@
 set -euo pipefail
 
 CONFIG_FILE="config/evaluate.yaml"
-# TITLE maps to the subfolder name under output/record/<TITLE>/...
-TITLE="autogen_scene_xx_xx"
-# eg:TITLE="autogen_scene_Kyle_Adams_q3-32-N"
-# Batch titles; if non-empty, these override TITLE.
+
+# Record root. If TITLE/TITLES is set, script will evaluate INPUT_ROOT/<title>.
+INPUT_ROOT="output/record"
+
+# Output root for async evaluator.
+# If path ends with by_model, results are written to by_model/<character_llm>/...
+OUTPUT_DIR="output/evaluation/by_model"
+
+# Optional: evaluate only one title folder under INPUT_ROOT.
+TITLE=""
+
+# Optional batch titles; if non-empty, these override TITLE.
 TITLES=(
-  # "autogen_scene_Henry_Long_q3-32-N"
+  # "autogen_scene_xxx"
 )
+
 # Optional file with one title per line (non-empty lines only).
 TITLES_FILE=""
-# These must match the <narrator>_<character> prefix in the record filename.
-NARRATOR_LLM="narrator_name"
-CHARACTER_LLM="character_name"
 
-if [[ -z "$CONFIG_FILE" || -z "$NARRATOR_LLM" || -z "$CHARACTER_LLM" ]]; then
-  echo "Missing evaluation inputs."
-  echo "Set CONFIG_FILE/TITLE/NARRATOR_LLM/CHARACTER_LLM in the script and try again."
-  exit 1
-fi
-if [[ ${#TITLES[@]} -eq 0 && -z "$TITLE" && -z "$TITLES_FILE" ]]; then
-  echo "Missing evaluation TITLE."
-  echo "Set TITLE, populate TITLES, or set TITLES_FILE in the script and try again."
+# Evaluator runtime options.
+GLOB="**/persona_detail/*_character.*"
+CONCURRENCY=4
+JUDGE_TIMEOUT=120
+RETRY=2
+MAX_FILES=0
+INDEX_RANGE=""
+RESUME=true
+TARGET_CHARACTER_ID=""
+
+if [[ -z "${CONFIG_FILE}" ]]; then
+  echo "Missing CONFIG_FILE."
   exit 1
 fi
 
 run_eval() {
-  local title="$1"
-  echo "Running evaluation for TITLE=$title"
-  python -u quick_start_arena.py \
-    --config_file "$CONFIG_FILE" \
-    --title "$title" \
-    --narrator_llm "$NARRATOR_LLM" \
-    --character_llm "$CHARACTER_LLM"
+  local input_dir="$1"
+  echo "Running evaluation: input_dir=${input_dir} output_dir=${OUTPUT_DIR}"
+
+  local cmd=(
+    python -u evaluate_arena.py
+    --config "${CONFIG_FILE}"
+    --input_dir "${input_dir}"
+    --output_dir "${OUTPUT_DIR}"
+    --glob "${GLOB}"
+    --concurrency "${CONCURRENCY}"
+    --judge_timeout "${JUDGE_TIMEOUT}"
+    --retry "${RETRY}"
+  )
+
+  if [[ "${MAX_FILES}" != "0" ]]; then
+    cmd+=(--max_files "${MAX_FILES}")
+  fi
+  if [[ -n "${INDEX_RANGE}" ]]; then
+    cmd+=(--index_range "${INDEX_RANGE}")
+  fi
+  if [[ "${RESUME}" == "true" ]]; then
+    cmd+=(--resume)
+  fi
+  if [[ -n "${TARGET_CHARACTER_ID}" ]]; then
+    cmd+=(--target_character_id "${TARGET_CHARACTER_ID}")
+  fi
+
+  "${cmd[@]}"
 }
 
-if [[ -n "$TITLES_FILE" ]]; then
-  if [[ ! -f "$TITLES_FILE" ]]; then
-    echo "TITLES_FILE not found: $TITLES_FILE"
+if [[ -n "${TITLES_FILE}" ]]; then
+  if [[ ! -f "${TITLES_FILE}" ]]; then
+    echo "TITLES_FILE not found: ${TITLES_FILE}"
     exit 1
   fi
-  mapfile -t TITLES < <(rg -v "^\s*$" "$TITLES_FILE" || true)
+  mapfile -t TITLES < <(rg -v "^\s*$" "${TITLES_FILE}" || true)
 fi
 
 if [[ ${#TITLES[@]} -gt 0 ]]; then
   for t in "${TITLES[@]}"; do
-    run_eval "$t"
+    run_eval "${INPUT_ROOT}/${t}"
   done
+elif [[ -n "${TITLE}" ]]; then
+  run_eval "${INPUT_ROOT}/${TITLE}"
 else
-  run_eval "$TITLE"
+  run_eval "${INPUT_ROOT}"
 fi
