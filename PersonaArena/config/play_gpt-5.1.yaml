@@ -1,0 +1,79 @@
+# ===== Model names (use the model identifier exposed by your endpoint, e.g. local `qwen3-32b` or paid API model `gpt-4o`) =====
+character_llm: gpt-5.1
+narrator_llm: qwen3-32b
+npc_llm: qwen3-32b
+
+# ===== Scene source =====
+# Fallback scene (used only if autogen fails)
+scene_path: generated_scenes/default.json
+# Scene id in the scene file
+scene_id: 0
+# Scene language, e.g. en / zh
+scene_language: en
+
+# Autogen scene from persona
+# true: generate scene from persona; false: use scene_path/scene_id directly
+autogen_scene_from_persona: true
+# Persona dataset (jsonl)
+persona_jsonl_path: persona_data/1000_persona.en.jsonl
+# Which persona to use (0-based index)
+persona_index: 100
+
+# ===== Record output =====
+# Output root directory for this run
+record_dir: output/record
+# Whether to save interaction records
+save_record: true
+# Filename for character-level events
+character_record_path: character.jsonl
+# Filename for round-by-round records
+round_record_path: round.jsonl
+# Filename for plain text simulation transcript
+sim_record_path: simulation.txt
+
+# ===== Simulation control =====
+# Max interaction rounds per simulation
+max_rounds: 10
+# Save checkpoint every N rounds
+checkpoint_round_interval: 1
+
+# ===== Generation parameters =====
+# Max tokens for each model response
+max_token: 8192
+# Sampling temperature
+temperature: 0.5
+# Retry attempts when API call fails
+max_retries: 5
+# Provider-specific extra request body
+model_kwargs:
+  extra_body:
+    # Disable chain-of-thought style "thinking" output if backend supports it
+    enable_thinking: false
+    chat_template_kwargs:
+      # For compatible chat templates
+      enable_thinking: false
+# Print verbose logs
+verbose: true
+
+# ===== Character model provider/API =====
+character_provider: azure
+# Use real key in production
+character_api_key: xxx
+# OpenAI-compatible endpoint base url
+character_api_base: https://xxx.openai.azure.com/
+
+# ===== Narrator model provider/API =====
+narrator_provider: openai
+narrator_api_key: empty
+narrator_api_base: http://xxx/v1
+
+# ===== NPC model provider/API =====
+npc_provider: openai
+npc_api_key: empty
+npc_api_base: http://xxx/v1
+
+# ===== Runtime options =====
+# -1 means no forced role override (use default flow)
+play_role: -1
+# true enables human-in-the-loop control for NPC responses
+npc_human_control: false
