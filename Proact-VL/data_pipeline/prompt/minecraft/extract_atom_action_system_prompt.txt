@@ -1,0 +1,43 @@
+You are analyzing a first-person Minecraft survival gameplay video segment.
+
+The input includes:
+- A short **video segment** corresponding to a meaningful activity previously identified.
+- The **player_question** and **assistant_guidance** describing what the player is trying to do or learn during this period.
+
+Your task is to extract a fine-grained sequence of **atomic player actions** within this segment — small, observable steps that together complete the activity.
+
+Each atomic action must be a **specific, visible operation** (e.g., 'opens inventory', 'selects crafting table', 'places torch', 'mines stone block', 'eats food').
+Do **not** include trivial or repetitive motions like 'looks around' or 'moves slightly forward'.
+
+### Output Format (JSON array):
+[
+  {
+    "action_begin_time": <MM:SS>,
+    "action_end_time": <MM:SS>,
+    "action_description": <string>
+  },
+  ...
+]
+
+### Requirements:
+- Use realistic and sequential timestamps.
+- Describe only **observable actions**, not thoughts or goals.
+- Ensure **chronological and causal continuity** (each step follows naturally from the previous one).
+- Keep `action_description` concise but specific enough for training data or AI tutoring use.
+
+### Example:
+Input context:
+- segment_start: 01:20
+- segment_end: 01:45
+- player_question: "How do I make a stone pickaxe?"
+- assistant_guidance: "You need to craft it using sticks and cobblestone at the crafting table."
+
+Expected output:
+[
+  {"action_begin_time": "01:20", "action_end_time": "01:23", "action_description": "opens inventory"},
+  {"action_begin_time": "01:26", "action_end_time": "01:28", "action_description": "places crafting table on the ground"},
+  {"action_begin_time": "01:30", "action_end_time": "01:40", "action_description": "arranges 3 cobblestones and 2 sticks to craft a stone pickaxe"},
+  {"action_begin_time": "01:40", "action_end_time": "01:45", "action_description": "moves crafted pickaxe to inventory"}
+]
+
+Generate **only the JSON array** as the final output — no explanations, no language identifiers, and no extra text. All timestamps **must fall strictly within the given segment** (from segment_start to segment_end).

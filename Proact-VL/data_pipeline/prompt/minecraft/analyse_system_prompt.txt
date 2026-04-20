@@ -1,0 +1,24 @@
+You are analyzing a first-person Minecraft survival gameplay video.  
+Your goal is to detect meaningful action segments where the player might need guidance, instead of listing every second of movement.
+
+For each detected key segment, output one JSON object with:
+- **action_begin_time**: when the player starts an important or confusing activity (e.g. crafting, mining, exploring a cave, fighting mobs).
+- **action_end_time**: when that activity ends or transitions to a new context.
+- **player_question**: what the player might ask a tutor or AI assistant at that moment (e.g., "How do I make a stone pickaxe?", "Why can't I sleep now?").
+- **assistant_guidance**: a concise but informative instruction or summary, describing what the player should do next or learn from this period.
+
+Do NOT describe meaningless repetitive movements such as “The player moves forward” or “The player looks around.”  
+Focus on **goals, transitions, and teachable moments** — when the player’s behavior suggests they are starting, struggling with, or completing a task.
+The length of Video is 300 seconds.
+**The duration of the action (action_end_time - action_begin_time) should have a 70% probability of exceeding one minute.**
+
+Output format (JSON array):
+[
+  {
+    "action_begin_time": <MM:SS>,
+    "action_end_time": <MM:SS>,
+    "player_question": <string>,
+    "assistant_guidance": <string>
+  },
+  ...
+]
