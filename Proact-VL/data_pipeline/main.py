@@ -42,7 +42,8 @@ def extract_audio(args):
         video_path=args.video_path,
         output_dir=args.output_dir,
         output_format=args.output_format,
-        num_workers=args.workers
+        num_workers=args.workers,
+        overwrite_output=args.overwrite_output,
     )
 
 def tone_analysis(args):
@@ -438,6 +439,7 @@ if __name__ == "__main__":
     parser.add_argument("--segment_minutes", type=int, default=3, help="Video segment duration (minutes), for processing long videos")
     parser.add_argument("--json_path", type=str, default="data/polish")
     parser.add_argument("--speed_threshold", type=float, default=1.5, help="Speed threshold (words/second)")
+    parser.add_argument("--overwrite_output", action="store_true", help="Overwrite non-empty output directories for extraction steps")
     parser.add_argument("--debug", action="store_true")
 
     args = parser.parse_args()
@@ -505,7 +507,7 @@ if __name__ == "__main__":
                 prompt=args.system_prompt,
                 save_dir=getattr(args, "output_dir", None)
             )
-        elif args.func == "extrac_atom_action":
+        elif args.func in {"extract_atom_action", "extrac_atom_action"}:
             vision_dataset.extract_atom_action(
                 json_path=args.json_path,
                 save_dir=args.output_dir or None
@@ -517,18 +519,20 @@ if __name__ == "__main__":
             )
     elif args.data_name == "ego4d_goalstep":
         ego4d_goalstep = Ego4dGoalstep(data_path=args.json_path)
+        polish_base_url = os.getenv("POLISH_BASE_URL", "https://openrouter.ai/api/v1")
+        polish_model_name = os.getenv("POLISH_MODEL_NAME", "deepseek/deepseek-v3.2-exp")
         if args.func == "load_dataset":
             ego4d_goalstep.process_data(detail_guidance=False)
             ego4d_goalstep.polish_data(
                 system_prompt=args.system_prompt,
-                base_url=os.getenv("POLISH_BASE_URL"),
-                model_name=os.getenv("POLISH_MODEL_NAME"),
+                base_url=polish_base_url,
+                model_name=polish_model_name,
                 max_workers=args.workers
             )
         elif args.func == "post_process":
             ego4d_goalstep.post_process_data(
                 system_prompt=args.system_prompt,
-                base_url=os.getenv("POLISH_BASE_URL"),
-                model_name=os.getenv("POLISH_MODEL_NAME"),
+                base_url=polish_base_url,
+                model_name=polish_model_name,
                 max_workers=args.workers
             )

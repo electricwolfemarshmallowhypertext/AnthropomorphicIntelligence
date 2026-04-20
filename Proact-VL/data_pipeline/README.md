@@ -17,7 +17,7 @@ Use Python 3.11.
 Install dependencies:
 
 ```bash
-cd LiveGamingBenchmark
+cd Proact-VL/data_pipeline
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
@@ -39,7 +39,7 @@ ffmpeg -version
 
 ## Environment Variables
 
-The code loads environment variables from [`client.env`](client.env) at the repository root.
+The code loads environment variables from [`client.env`](client.env) in the `data_pipeline` directory.
 
 Fill this file before running any script:
 
@@ -70,10 +70,10 @@ All current runnable scripts are in [`scripts/`](scripts/):
 - [`scripts/Minecraft.sh`](scripts/Minecraft.sh)
 - [`scripts/Ego4D.sh`](scripts/Ego4D.sh)
 
-Run them from the repository root:
+Run them from the `data_pipeline` directory:
 
 ```bash
-cd LiveGamingBenchmark
+cd Proact-VL/data_pipeline
 bash scripts/LOL.sh
 bash scripts/Cyberpunk.sh
 bash scripts/Minecraft.sh
@@ -141,7 +141,7 @@ Main outputs:
 Current steps:
 
 1. `process_vision`
-2. `extrac_atom_action`
+2. `extract_atom_action`
 3. `refine_atom_action`
 4. `post_process`
 5. `extract_role`

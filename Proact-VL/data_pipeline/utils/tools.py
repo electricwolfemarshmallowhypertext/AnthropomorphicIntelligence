@@ -14,16 +14,24 @@ Tools for audio extraction
 """    
 class AudioTools:
     def __init__(self,) -> None:
-        if not self.check_ffmpeg():
-            raise RuntimeError("FFmpeg is not installed. Please install it (e.g., 'brew install ffmpeg' on macOS or 'sudo apt install ffmpeg' on Linux).")
+        missing_binaries = [
+            binary for binary in ("ffmpeg", "ffprobe")
+            if not self.check_binary(binary)
+        ]
+        if missing_binaries:
+            missing = ", ".join(missing_binaries)
+            raise RuntimeError(
+                f"Required multimedia tools are not installed or not on PATH: {missing}. "
+                "Please install FFmpeg (which should include ffprobe)."
+            )
 
     @property
     def supported_format(self) -> list[str]:
         return ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v', '.3gp', '.mpg', '.mpeg']
        
-    def check_ffmpeg(self) -> bool:
+    def check_binary(self, binary: str) -> bool:
         try:
-            subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+            subprocess.run([binary, '-version'], capture_output=True, check=True)
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
             return False
@@ -51,6 +59,7 @@ class AudioTools:
         output_dir: str,
         num_workers: int = 4,
         output_format: str = "mp3",
+        overwrite_output: bool = False,
     ) -> None:
     
         logger.info(f"Extracting audio from {video_path} to {output_dir}")
@@ -60,12 +69,13 @@ class AudioTools:
         
         if output_path.exists():
             if output_path.glob('*') and any(output_path.iterdir()):
-                logger.warning(f"Output directory {output_dir} already exists and contains files. Please delete or rename them.")
-                choice = input("Do you want to overwrite the directory? (Y/N): ")
-                if choice.lower() == 'n':
+                if not overwrite_output:
+                    logger.warning(
+                        "Output directory %s already exists and contains files. "
+                        "Skipping extraction. Pass overwrite_output=True to overwrite existing outputs.",
+                        output_dir,
+                    )
                     return
-                else:
-                    pass
         else:
             output_path.mkdir(parents=True, exist_ok=True)
         

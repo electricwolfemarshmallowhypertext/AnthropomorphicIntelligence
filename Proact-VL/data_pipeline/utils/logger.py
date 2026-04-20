@@ -16,20 +16,22 @@ class ColorFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         original_levelname = record.levelname
-        original_msg = record.getMessage()
+        original_msg = record.msg
+        original_args = record.args
         color = self.LEVEL_TO_COLOR.get(record.levelno, "")
+        formatted_msg = record.getMessage()
 
         if color:
             record.levelname = f"{color}{original_levelname}{self.RESET}"
             if self.msg_color:
-                record.msg = f"{color}{original_msg}{self.RESET}"
+                record.msg = f"{color}{formatted_msg}{self.RESET}"
             record.args = None
         try:
             return super().format(record)
         finally:
             record.levelname = original_levelname
             record.msg = original_msg
-            record.args = None
+            record.args = original_args
 
 
 class Logger:
@@ -41,6 +43,7 @@ class Logger:
     ) -> None:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(level)
+        self.logger.propagate = False
         self.set_formatter(
             fmt=fmt,
             msg_color=msg_color
@@ -48,6 +51,11 @@ class Logger:
 
     def set_formatter(self, fmt: str, msg_color: bool = True) -> None:
         formatter = ColorFormatter(fmt, msg_color)
+        for handler in self.logger.handlers:
+            if isinstance(handler, logging.StreamHandler):
+                handler.setFormatter(formatter)
+                return
+
         handler = logging.StreamHandler()
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)

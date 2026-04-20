@@ -1,5 +1,10 @@
 #!/bin/bash
 
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/.."
+
 # Minecraft
 WORKERS=16
 
@@ -15,7 +20,7 @@ python main.py \
 
 python main.py \
     --data_name minecraft \
-    --func extrac_atom_action \
+    --func extract_atom_action \
     --json_path dataset/minecraft/analyse_video \
     --output_dir dataset/minecraft/action_infer \
     --vision_model qwen3-vl-plus \
